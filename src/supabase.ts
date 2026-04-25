@@ -133,3 +133,28 @@ export async function getWithdrawal(withdrawalId: string): Promise<Withdrawal | 
   if (error && error.code !== 'PGRST116') throw error;
   return data ?? null;
 }
+
+export async function getAllMerchants() {
+  const { data, error } = await supabase.from('merchants').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getPendingWithdrawals() {
+  const { data, error } = await supabase.from('withdrawals').select('*').in('status', ['PENDING', 'MANUAL_REVIEW']).order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getAllInvoices(limit = 20) {
+  const { data, error } = await supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getInvoicesByMerchant(merchantId: number, limit = 10) {
+  const { data, error } = await supabase.from('invoices').select('*').eq('merchant_id', merchantId).order('created_at', { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+donecat
