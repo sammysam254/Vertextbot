@@ -12,7 +12,7 @@ function escMD(text: string): string {
 
 export function registerCheckoutHandlers(bot: Telegraf) {
   // Intercept /start inv_<uuid> deep links
-  bot.start(async (ctx) => {
+  bot.start(async (ctx, next) => {
     const payload = ctx.startPayload;
     if (!payload?.startsWith('inv_')) return; // not a checkout link
 
