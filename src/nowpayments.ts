@@ -63,7 +63,7 @@ export async function createPayout(
       extra_id: withdrawalId,
       payout_description: `Escrow payout ${withdrawalId}`,
     },
-    { headers: { 'x-api-key': CONFIG.NOW_PAYOUT_KEY } }
+    { headers: { 'x-api-key': CONFIG.NOW_API_KEY } }
   );
   return data;
 }
