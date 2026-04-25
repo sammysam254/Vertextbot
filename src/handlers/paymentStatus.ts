@@ -70,7 +70,7 @@ export async function startPaymentTracker(bot: Telegraf, ctx: any, invoiceId: st
 
   const expiresAt = (invoice as any).expires_at ? new Date((invoice as any).expires_at) : new Date(new Date(invoice.created_at).getTime() + 20 * 60 * 1000);
   if (expiresAt.getTime() < Date.now()) {
-    await supabase.from('invoices').update({ status: 'EXPIRED' }).eq('invoice_id', invoiceId).catch(() => {});
+    try { await supabase.from('invoices').update({ status: 'EXPIRED' }).eq('invoice_id', invoiceId); } catch {}
     return ctx.reply('⛔ *Invoice Expired*\n\nAsk the merchant to send a new invoice link.', { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[Markup.button.callback('🏠 Menu', 'back_to_menu')]]) });
   }
 
@@ -96,7 +96,7 @@ export async function startPaymentTracker(bot: Telegraf, ctx: any, invoiceId: st
 
       if (expiry.getTime() < Date.now()) {
         stopTracker(invoiceId);
-        await supabase.from('invoices').update({ status: 'EXPIRED' }).eq('invoice_id', invoiceId).catch(() => {});
+        try { await supabase.from('invoices').update({ status: 'EXPIRED' }).eq('invoice_id', invoiceId); } catch {}
         await bot.telegram.editMessageText(chatId, messageId, undefined, `⛔ *Payment Expired*\n\nAsk the merchant to send a new invoice link.`, { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[Markup.button.callback('🏠 Menu', 'back_to_menu')]]) });
         return;
       }

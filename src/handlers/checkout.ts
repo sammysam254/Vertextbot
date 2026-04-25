@@ -17,7 +17,7 @@ export async function handleCheckoutPayload(bot: Telegraf, ctx: any, next: any) 
   if ((invoice as any).status === 'EXPIRED') return ctx.reply('⛔ Invoice expired. Ask the merchant for a new one.');
   const expiresAt = (invoice as any).expires_at ? new Date((invoice as any).expires_at) : null;
   if (expiresAt && expiresAt.getTime() < Date.now()) {
-    await supabase.from('invoices').update({ status: 'EXPIRED' }).eq('invoice_id', invoiceId).catch(() => {});
+    try { await supabase.from('invoices').update({ status: 'EXPIRED' }).eq('invoice_id', invoiceId); } catch {}
     return ctx.reply('⛔ Invoice expired. Ask the merchant for a new link.');
   }
   const merchant = await getMerchant(invoice.merchant_id).catch(() => null);
@@ -26,7 +26,7 @@ export async function handleCheckoutPayload(bot: Telegraf, ctx: any, next: any) 
   try { payment = await createPayment(invoice.amount_fiat, invoiceId, network); }
   catch (err: any) { console.error('[checkout]', err?.response?.data ?? err); return ctx.reply('⚠️ Unable to generate payment. Try again.'); }
   const { pay_address, pay_amount, pay_currency, payment_id } = payment;
-  await supabase.from('invoices').update({ now_payment_id: payment_id, expires_at: new Date(Date.now() + 20 * 60 * 1000).toISOString() }).eq('invoice_id', invoiceId).catch(() => {});
+  try { await supabase.from('invoices').update({ now_payment_id: payment_id, expires_at: new Date(Date.now() + 20 * 60 * 1000).toISOString() }).eq('invoice_id', invoiceId); } catch {}
   let qrBuffer: Buffer;
   try { qrBuffer = await QRCode.toBuffer(pay_address, { type: 'png', width: 400, margin: 2 }); }
   catch { return ctx.reply(`📬 Send \`${pay_amount} ${pay_currency.toUpperCase()}\` to:\n\`${pay_address}\``, { parse_mode: 'Markdown' }); }
