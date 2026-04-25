@@ -157,4 +157,3 @@ export async function getInvoicesByMerchant(merchantId: number, limit = 10) {
   if (error) throw error;
   return data ?? [];
 }
-donecat
