@@ -57,7 +57,7 @@ export function registerInvoiceHandlers(bot: Telegraf) {
         `📎 *Share this link with your customer:*\n` +
         `[Pay Now ➜](${deepLink})\n\n` +
         `Or send them this raw link:\n\`${deepLink}\``,
-        { parse_mode: 'Markdown', disable_web_page_preview: true }
+        { parse_mode: 'Markdown', link_preview_options: { is_disabled: true } }
       );
     } catch (err) {
       console.error('[invoice] createInvoice error:', err);
