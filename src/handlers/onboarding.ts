@@ -22,35 +22,6 @@ const NETWORK_EXAMPLE_ADDR: Record<PayoutNetwork, string> = {
 };
 
 export function registerOnboardingHandlers(bot: Telegraf) {
-  // ─── /start ──────────────────────────────────────────────────────────────
-  bot.start(async (ctx) => {
-    const payload = ctx.startPayload; // e.g. "inv_<uuid>"
-
-    // Delegate deep-link to checkout handler if payload present
-    if (payload?.startsWith('inv_')) return; // handled in checkout.ts
-
-    const userId = ctx.from?.id;
-    if (!userId) return;
-
-    const merchant = await getMerchant(userId).catch(() => null);
-
-    if (merchant?.payout_address) {
-      return ctx.reply(
-        `👋 Welcome back!\n\nYou're registered as a merchant on *${merchant.payout_network}*.\n\nUse /invoice <amount> <description> to create an invoice.`,
-        { parse_mode: 'Markdown' }
-      );
-    }
-
-    await ctx.reply(
-      `🏦 *Centralized Escrow Bot*\n\nI help you collect crypto payments and manage escrow.\n\nWhat would you like to do?`,
-      {
-        parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard([
-          [Markup.button.callback('🏪 Register as Merchant', 'register_merchant')],
-        ]),
-      }
-    );
-  });
 
   // ─── Register CTA ─────────────────────────────────────────────────────────
   bot.action('register_merchant', async (ctx) => {
