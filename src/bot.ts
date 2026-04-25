@@ -7,6 +7,7 @@ import { registerWalletHandlers, withdrawSession } from './handlers/wallet';
 import { registerWithdrawalHandlers } from './handlers/withdrawal';
 import { registerAdminHandlers } from './handlers/admin';
 import { registerPaymentStatusHandlers } from './handlers/paymentStatus';
+import { registerCurrencyPickerHandlers } from './handlers/checkout';
 import { handleCheckoutPayload } from './handlers/checkout';
 import { getMerchant, createInvoice } from './supabase';
 
@@ -35,6 +36,7 @@ export function createBot(): Telegraf {
   registerWithdrawalHandlers(bot);
   registerAdminHandlers(bot);
   registerPaymentStatusHandlers(bot);
+  registerCurrencyPickerHandlers(bot);
 
   // ── /balance shortcut ────────────────────────────────────────────────────
   bot.command('balance', async (ctx) => {
