@@ -2,7 +2,7 @@ import { Telegraf } from 'telegraf';
 import { CONFIG } from './config';
 import { registerOnboardingHandlers } from './handlers/onboarding';
 import { registerInvoiceHandlers } from './handlers/invoice';
-import { registerCheckoutHandlers } from './handlers/checkout';
+
 import { registerWithdrawalHandlers } from './handlers/withdrawal';
 
 export function createBot(): Telegraf {
