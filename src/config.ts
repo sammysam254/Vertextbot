@@ -19,7 +19,7 @@ export const CONFIG = {
 
   // NOWPayments
   NOW_API_KEY: require_env('NOW_API_KEY'),           // deposit API key
-  NOW_PAYOUT_KEY: require_env('NOW_PAYOUT_KEY'),     // payout/mass-payout API key
+     // payout/mass-payout API key
   NOW_IPN_SECRET: require_env('NOW_IPN_SECRET'),     // webhook secret for HMAC
 
   // Server
