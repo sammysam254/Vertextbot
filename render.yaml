@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: escrow-bot
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: USE_WEBHOOK
+        value: "true"
+      - key: BOT_TOKEN
+        sync: false
+      - key: BOT_USERNAME
+        sync: false
+      - key: ADMIN_CHAT_ID
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: NOW_API_KEY
+        sync: false
+      - key: NOW_PAYOUT_KEY
+        sync: false
+      - key: NOW_IPN_SECRET
+        sync: false
+      - key: WEBHOOK_DOMAIN
+        sync: false
+    healthCheckPath: /health
