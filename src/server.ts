@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import { Telegraf } from 'telegraf';
 import { CONFIG } from './config';
-import { getInvoice, markInvoicePaid, creditMerchantBalance } from './supabase';
+import { getInvoice, markInvoicePaid, creditMerchantBalance, supabase } from './supabase';
 
 export function createServer(bot: Telegraf) {
   const app = express();
