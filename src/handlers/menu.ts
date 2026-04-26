@@ -206,7 +206,7 @@ export function registerMenuHandlers(bot: Telegraf) {
       'API Documentation: https://vertextbot.onrender.com/api-docs\n' +
       'Dashboard: https://vertextbot.onrender.com/dashboard',
       {
-        disable_web_page_preview: true,
+        link_preview_options: { is_disabled: true },
         reply_markup: {
           inline_keyboard: [
             [{ text: 'Terms of Service', url: 'https://vertextbot.onrender.com/terms' }, { text: 'Privacy Policy', url: 'https://vertextbot.onrender.com/privacy' }],
