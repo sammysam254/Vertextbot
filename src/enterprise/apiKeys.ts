@@ -20,12 +20,22 @@ export function registerApiKeyHandlers(bot: Telegraf) {
   });
 
   bot.action('regen_api_key', async (ctx) => {
-    await ctx.answerCbQuery();
+    await ctx.answerCbQuery('Generating key...');
     const userId = ctx.from?.id;
     if (!userId) return;
+    const merchant = await getMerchant(userId).catch(() => null);
+    if (!merchant?.payout_address) return ctx.reply('Register as a merchant first.');
     const newKey = generateApiKey();
     await supabase.from('merchants').update({ api_key: newKey }).eq('telegram_id', userId);
-    await ctx.editMessageText('New API Key:\n\n' + newKey + '\n\nOld key is now invalid.');
+    await ctx.reply(
+      '🔑 *API Key Generated!*\n\n`' + newKey + '`\n\n' +
+      'Use this to:\n' +
+      '• Login to the web dashboard\n' +
+      '• Authenticate API requests\n' +
+      '• Verify webhook signatures\n\n' +
+      '⚠️ Keep this secret — it grants full access to your account.',
+      { parse_mode: 'Markdown' }
+    );
   });
 
   bot.command('setwebhook', async (ctx) => {

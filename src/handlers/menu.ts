@@ -199,7 +199,22 @@ export function registerMenuHandlers(bot: Telegraf) {
       '/setwebhook <url> - Set webhook URL\n' +
       '/checkpayment <id> - Track payment\n\n' +
       'ADMIN ONLY:\n' +
-      '/resolve_dispute <id> <release|refund>'
+      '/resolve_dispute <id> <release|refund>\n\n' +
+      'LEGAL & DOCS:\n' +
+      'Terms of Service: https://vertextbot.onrender.com/terms\n' +
+      'Privacy Policy: https://vertextbot.onrender.com/privacy\n' +
+      'API Documentation: https://vertextbot.onrender.com/api-docs\n' +
+      'Dashboard: https://vertextbot.onrender.com/dashboard',
+      {
+        disable_web_page_preview: true,
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: 'Terms of Service', url: 'https://vertextbot.onrender.com/terms' }, { text: 'Privacy Policy', url: 'https://vertextbot.onrender.com/privacy' }],
+            [{ text: 'API Documentation', url: 'https://vertextbot.onrender.com/api-docs' }],
+            [{ text: 'Web Dashboard', url: 'https://vertextbot.onrender.com/dashboard' }],
+          ]
+        }
+      }
     );
   });
 
