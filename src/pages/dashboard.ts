@@ -43,6 +43,9 @@ body { font-family:var(--sans); background:var(--bg); color:var(--text); min-hei
 .btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
 .btn-danger { background:transparent; color:var(--danger); border:1px solid var(--danger); }
 .btn-sm { padding:8px 16px; font-size:13px; width:auto; border-radius:8px; }
+.btn:disabled { opacity:.6; cursor:not-allowed; }
+.spinner-inline { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:4px; }
+.alert-info { background:#001a3a; border:1px solid #448aff; color:#90caf9; }
 
 /* App Layout */
 .app { display:none; flex-direction:column; min-height:100vh; }
@@ -217,7 +220,7 @@ body { font-family:var(--sans); background:var(--bg); color:var(--text); min-hei
           <label>Description</label>
           <textarea id="invDesc" placeholder="e.g. Website design deposit"></textarea>
         </div>
-        <button class="btn btn-primary" onclick="createInvoice()">Generate Invoice Link</button>
+        <button class="btn btn-primary" id="createInvoiceBtn" onclick="createInvoiceWeb()">Generate Invoice Link</button>
       </div>
       <div id="invoiceResult" style="display:none">
         <div class="card">
@@ -364,14 +367,25 @@ async function login() {
   const apiKey = document.getElementById('loginApiKey').value.trim();
   if (!tgId || !apiKey) { showAuthAlert('Please enter both fields.', 'error'); return; }
 
+  const btn = document.querySelector('.auth-card .btn-primary');
+  setLoading(btn, true, 'Accessing Dashboard...');
+  showAuthAlert('Connecting to server...', 'info');
+
   try {
     const res = await fetch('/api/dashboard?user_id=' + tgId + '&api_key=' + apiKey);
-    if (!res.ok) { showAuthAlert('Invalid credentials. Check your Telegram ID and API key.', 'error'); return; }
     const data = await res.json();
+    if (!res.ok) {
+      showAuthAlert(data.error || 'Invalid credentials. Check your Telegram ID and API key.', 'error');
+      setLoading(btn, false, 'Access Dashboard');
+      return;
+    }
     SESSION = { userId: parseInt(tgId), apiKey, merchant: data.merchant };
     localStorage.setItem('vxt_session', JSON.stringify({ userId: SESSION.userId, apiKey: SESSION.apiKey }));
     showApp('Merchant #' + tgId, data);
-  } catch (e) { showAuthAlert('Login failed: ' + e.message, 'error'); }
+  } catch (e) {
+    showAuthAlert('Connection failed: ' + e.message + '. Check your internet.', 'error');
+    setLoading(btn, false, 'Access Dashboard');
+  }
 }
 
 function logout() {
@@ -382,7 +396,20 @@ function logout() {
 }
 
 function showAuthAlert(msg, type) {
-  document.getElementById('authAlert').innerHTML = '<div class="alert alert-' + (type==='error'?'error':'success') + '">' + msg + '</div>';
+  const cls = type === 'error' ? 'error' : type === 'info' ? 'info' : 'success';
+  document.getElementById('authAlert').innerHTML = '<div class="alert alert-' + cls + '">' + msg + '</div>';
+}
+
+function setLoading(btn, loading, originalText) {
+  if (!btn) return;
+  if (loading) {
+    btn.disabled = true;
+    btn.dataset.original = btn.textContent;
+    btn.innerHTML = '<span class="spinner-inline"></span> ' + originalText;
+  } else {
+    btn.disabled = false;
+    btn.textContent = originalText || btn.dataset.original || 'Submit';
+  }
 }
 
 // ── App Init ─────────────────────────────────────────────────────────────────
@@ -461,12 +488,14 @@ function showInvoiceDetail(invoiceId) {
 function closeModal() { document.getElementById('invoiceModal').classList.remove('open'); }
 
 // ── Create Invoice ────────────────────────────────────────────────────────────
-async function createInvoice() {
+async function createInvoiceWeb() {
   const amount = parseFloat(document.getElementById('invAmount').value);
   const desc = document.getElementById('invDesc').value.trim();
   const alertEl = document.getElementById('createAlert');
   if (!amount || amount < 1) { alertEl.innerHTML = '<div class="alert alert-error">Minimum amount is $1.00</div>'; return; }
   if (!desc) { alertEl.innerHTML = '<div class="alert alert-error">Please enter a description.</div>'; return; }
+  const btn = document.getElementById('createInvoiceBtn');
+  setLoading(btn, true, 'Creating...');
   alertEl.innerHTML = '<div class="alert alert-info">Creating invoice...</div>';
   try {
     const res = await fetch('/api/invoices', {
@@ -475,12 +504,13 @@ async function createInvoice() {
       body: JSON.stringify({ amount, description: desc }),
     });
     const data = await res.json();
+    setLoading(btn, false, 'Generate Invoice Link');
     if (!res.ok) { alertEl.innerHTML = '<div class="alert alert-error">' + (data.error || 'Failed') + '</div>'; return; }
     alertEl.innerHTML = '<div class="alert alert-success">Invoice created successfully!</div>';
     currentInvoiceLink = data.link;
     document.getElementById('invoiceLinkBox').textContent = data.link;
     document.getElementById('invoiceResult').style.display = 'block';
-  } catch (e) { alertEl.innerHTML = '<div class="alert alert-error">Error: ' + e.message + '</div>'; }
+  } catch (e) { setLoading(btn, false, 'Generate Invoice Link'); alertEl.innerHTML = '<div class="alert alert-error">Error: ' + e.message + '</div>'; }
 }
 
 function copyInvoiceLink() { navigator.clipboard.writeText(currentInvoiceLink); showAlert('Link copied!', 'success'); }
@@ -526,8 +556,9 @@ function calcFees() {
 async function requestWithdraw() {
   const amount = parseFloat(document.getElementById('wdAmount').value);
   if (!amount) return;
-  document.getElementById('withdrawAlert').innerHTML = '<div class="alert alert-info">Withdrawal request sent to bot. Check your Telegram for confirmation.</div>';
-  document.getElementById('wdBtn').disabled = true;
+  const btn = document.getElementById('wdBtn');
+  setLoading(btn, true, 'Sending...');
+  document.getElementById('withdrawAlert').innerHTML = '<div class="alert alert-info">Processing withdrawal request...</div>';
   try {
     const res = await fetch('/api/withdraw', {
       method: 'POST',
@@ -535,8 +566,18 @@ async function requestWithdraw() {
       body: JSON.stringify({ amount }),
     });
     const data = await res.json();
-    if (!res.ok) { document.getElementById('withdrawAlert').innerHTML = '<div class="alert alert-error">' + (data.error || 'Failed') + '</div>'; document.getElementById('wdBtn').disabled = false; }
-  } catch (e) { document.getElementById('withdrawAlert').innerHTML = '<div class="alert alert-error">' + e.message + '</div>'; document.getElementById('wdBtn').disabled = false; }
+    if (!res.ok) {
+      document.getElementById('withdrawAlert').innerHTML = '<div class="alert alert-error">' + (data.error || 'Failed') + '</div>';
+      setLoading(btn, false, 'Withdraw');
+      btn.disabled = false;
+    } else {
+      document.getElementById('withdrawAlert').innerHTML = '<div class="alert alert-success">Withdrawal initiated! Check your Telegram to confirm.</div>';
+      setLoading(btn, false, 'Withdraw');
+    }
+  } catch (e) {
+    document.getElementById('withdrawAlert').innerHTML = '<div class="alert alert-error">' + e.message + '</div>';
+    setLoading(btn, false, 'Withdraw');
+  }
 }
 
 // ── API Settings ──────────────────────────────────────────────────────────────
@@ -558,21 +599,23 @@ async function loadApiSettings() {
 }
 
 async function generateApiKey() {
+  const btn = document.querySelector('#tab-api .btn-primary');
+  setLoading(btn, true, 'Generating...');
   try {
     const res = await fetch('/api/apikey', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Merchant-Id': SESSION.userId, 'X-Api-Key': SESSION.apiKey || 'none' },
     });
     const data = await res.json();
+    setLoading(btn, false, 'Generate New Key');
     if (!res.ok) { showAlert(data.error || 'Failed to generate key', 'error'); return; }
     currentApiKey = data.api_key;
-    document.getElementById('apiKeyDisplay').innerHTML = '<div class="apikey-box">' + data.api_key + '</div><div style="font-size:12px;color:var(--muted)">Save this key — it is used to authenticate API requests and verify webhooks.</div>';
+    document.getElementById('apiKeyDisplay').innerHTML = '<div class="apikey-box">' + data.api_key + '</div><div style="font-size:12px;color:var(--muted);margin-top:8px">Save this key — use it to login here and authenticate API requests.</div>';
     document.getElementById('copyKeyBtn').style.display = 'inline-block';
-    showAlert('API key generated successfully!', 'success');
-    // Update session with new key
+    showAlert('API key generated! Copy it now.', 'success');
     SESSION.apiKey = data.api_key;
     localStorage.setItem('vxt_session', JSON.stringify({ userId: SESSION.userId, apiKey: SESSION.apiKey }));
-  } catch (e) { showAlert('Error: ' + e.message, 'error'); }
+  } catch (e) { setLoading(btn, false, 'Generate New Key'); showAlert('Error: ' + e.message, 'error'); }
 }
 
 function copyApiKey() { navigator.clipboard.writeText(currentApiKey); showAlert('API key copied!', 'success'); }
@@ -580,6 +623,8 @@ function copyApiKey() { navigator.clipboard.writeText(currentApiKey); showAlert(
 async function saveWebhook() {
   const url = document.getElementById('webhookUrl').value.trim();
   if (!url.startsWith('https://')) { showAlert('Webhook URL must use HTTPS', 'error'); return; }
+  const btns = document.querySelectorAll('#tab-api .btn-primary, #tab-api .btn-danger');
+  btns.forEach(b => b.disabled = true);
   try {
     const res = await fetch('/api/webhook-url', {
       method: 'POST',
@@ -587,10 +632,11 @@ async function saveWebhook() {
       body: JSON.stringify({ webhook_url: url }),
     });
     const data = await res.json();
+    btns.forEach(b => b.disabled = false);
     if (!res.ok) { showAlert(data.error || 'Failed', 'error'); return; }
     document.getElementById('webhookDisplay').textContent = url;
     showAlert('Webhook URL saved!', 'success');
-  } catch (e) { showAlert('Error: ' + e.message, 'error'); }
+  } catch (e) { btns.forEach(b => b.disabled = false); showAlert('Error: ' + e.message, 'error'); }
 }
 
 async function removeWebhook() {

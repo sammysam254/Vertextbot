@@ -33,8 +33,18 @@ async function authMerchant(req: Request, res: Response): Promise<{ merchant: an
   if (apiKey === 'tg_auth') return { merchant };
 
   // Verify API key
-  if (!apiKey || merchant.api_key !== apiKey) {
-    res.status(401).json({ error: 'Invalid API key. Generate one with /apikey in the bot.' });
+  if (!apiKey) {
+    res.status(401).json({ error: 'API key required. Send /apikey to the bot to generate one.' });
+    return null;
+  }
+
+  if (!merchant.api_key) {
+    res.status(401).json({ error: 'No API key set for this account. Send /apikey to the bot first.' });
+    return null;
+  }
+
+  if (merchant.api_key !== apiKey) {
+    res.status(401).json({ error: 'Invalid API key. Check you copied it correctly from the bot.' });
     return null;
   }
 
