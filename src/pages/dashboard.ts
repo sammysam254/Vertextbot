@@ -1,666 +1,558 @@
 export function getDashboardHTML(): string {
-  return `<!DOCTYPE html>
+  return String.raw`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
-<title>Vertext — Merchant Dashboard</title>
+<title>Vertext — Dashboard</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #080810;
-  --surface: #0f0f1c;
-  --surface2: #161628;
-  --border: #1e1e35;
-  --accent: #00e676;
-  --accent2: #7c4dff;
-  --danger: #ff5252;
-  --warn: #ffab40;
-  --text: #e8e8f0;
-  --muted: #6b6b8a;
-  --mono: 'Space Mono', monospace;
-  --sans: 'DM Sans', sans-serif;
-}
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:var(--sans); background:var(--bg); color:var(--text); min-height:100vh; }
-
-/* Auth Screen */
-.auth-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding:24px; }
-.auth-logo { font-family:var(--mono); font-size:32px; color:var(--accent); margin-bottom:8px; letter-spacing:-2px; }
-.auth-sub { color:var(--muted); font-size:14px; margin-bottom:40px; }
-.auth-card { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:32px; width:100%; max-width:400px; }
-.auth-title { font-size:18px; font-weight:600; margin-bottom:6px; }
-.auth-desc { color:var(--muted); font-size:13px; margin-bottom:24px; line-height:1.6; }
-.field { margin-bottom:16px; }
-.field label { display:block; font-size:12px; color:var(--muted); font-family:var(--mono); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
-.field input { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:12px 16px; color:var(--text); font-family:var(--sans); font-size:15px; outline:none; transition:border-color .2s; }
-.field input:focus { border-color:var(--accent2); }
-.btn { width:100%; padding:14px; border:none; border-radius:12px; font-size:15px; font-weight:600; cursor:pointer; font-family:var(--sans); transition:all .2s; }
-.btn-primary { background:var(--accent); color:#000; }
-.btn-primary:hover { background:#00c853; }
-.btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
-.btn-danger { background:transparent; color:var(--danger); border:1px solid var(--danger); }
-.btn-sm { padding:8px 16px; font-size:13px; width:auto; border-radius:8px; }
-.btn:disabled { opacity:.6; cursor:not-allowed; }
-.spinner-inline { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:4px; }
-.alert-info { background:#001a3a; border:1px solid #448aff; color:#90caf9; }
-
-/* App Layout */
-.app { display:none; flex-direction:column; min-height:100vh; }
-.app.visible { display:flex; }
-.topbar { background:var(--surface); border-bottom:1px solid var(--border); padding:16px 20px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
-.topbar-logo { font-family:var(--mono); font-size:18px; color:var(--accent); letter-spacing:-1px; }
-.topbar-user { font-size:13px; color:var(--muted); }
-.nav { background:var(--surface); border-bottom:1px solid var(--border); display:flex; overflow-x:auto; padding:0 8px; gap:4px; }
-.nav::-webkit-scrollbar { display:none; }
-.nav-btn { padding:12px 16px; font-size:13px; font-weight:500; color:var(--muted); background:none; border:none; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; transition:all .2s; font-family:var(--sans); }
-.nav-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
-.content { flex:1; padding:20px; max-width:800px; width:100%; margin:0 auto; }
-
-/* Cards */
-.card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; margin-bottom:16px; }
-.card-title { font-size:11px; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
-.balance-big { font-size:40px; font-weight:700; font-family:var(--mono); color:var(--accent); line-height:1; }
-.balance-unit { font-size:14px; color:var(--muted); margin-top:4px; }
-.stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
-.stat { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center; }
-.stat-val { font-size:24px; font-weight:700; font-family:var(--mono); }
-.stat-label { font-size:11px; color:var(--muted); margin-top:4px; }
-
-/* Invoice list */
-.inv-item { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:border-color .2s; }
-.inv-item:hover { border-color:var(--accent2); }
-.inv-desc { font-size:14px; font-weight:500; }
-.inv-meta { font-size:11px; color:var(--muted); margin-top:3px; font-family:var(--mono); }
-.inv-amount { font-size:16px; font-weight:700; font-family:var(--mono); text-align:right; }
-.badge { display:inline-block; padding:3px 10px; border-radius:6px; font-size:10px; font-weight:700; font-family:var(--mono); margin-top:4px; }
-.badge-paid { background:#003322; color:var(--accent); }
-.badge-pending { background:#1a1600; color:var(--warn); }
-.badge-expired { background:#1a0000; color:var(--danger); }
-.badge-open { background:#1a0000; color:var(--danger); }
-
-/* Forms */
-.form-group { margin-bottom:20px; }
-.form-group label { display:block; font-size:12px; color:var(--muted); font-family:var(--mono); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
-.form-group input, .form-group select, .form-group textarea { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:12px 16px; color:var(--text); font-family:var(--sans); font-size:15px; outline:none; transition:border-color .2s; }
-.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:var(--accent2); }
-.form-group textarea { resize:vertical; min-height:80px; }
-.form-group select option { background:var(--surface); }
-
-/* Modal */
-.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:200; align-items:center; justify-content:center; padding:20px; }
-.modal-overlay.open { display:flex; }
-.modal { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:28px; width:100%; max-width:460px; max-height:90vh; overflow-y:auto; }
-.modal-title { font-size:18px; font-weight:600; margin-bottom:20px; }
-.modal-close { float:right; background:none; border:none; color:var(--muted); font-size:22px; cursor:pointer; }
-
-/* API Key */
-.apikey-box { background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:16px; font-family:var(--mono); font-size:13px; word-break:break-all; color:var(--accent); margin:12px 0; }
-.copy-btn { background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:8px 14px; border-radius:8px; font-size:12px; cursor:pointer; font-family:var(--mono); }
-.copy-btn:hover { border-color:var(--accent); color:var(--accent); }
-
-/* Payment link */
-.link-box { background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:14px; font-family:var(--mono); font-size:12px; word-break:break-all; color:var(--accent2); margin:12px 0; }
-
-/* Alert */
-.alert { padding:12px 16px; border-radius:10px; font-size:13px; margin-bottom:16px; }
-.alert-success { background:#003322; border:1px solid var(--accent); color:var(--accent); }
-.alert-error { background:#1a0000; border:1px solid var(--danger); color:var(--danger); }
-.alert-info { background:#0a0a2a; border:1px solid var(--accent2); color:var(--accent2); }
-
-/* Loading */
-.spinner { width:40px; height:40px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; margin:40px auto; }
-@keyframes spin { to { transform:rotate(360deg); } }
-.loading-text { text-align:center; color:var(--muted); padding:40px; }
-
-/* Withdraw form */
-.fee-breakdown { background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:16px; margin:12px 0; }
-.fee-row { display:flex; justify-content:space-between; font-size:13px; padding:4px 0; }
-.fee-row.total { border-top:1px solid var(--border); margin-top:8px; padding-top:12px; font-weight:700; color:var(--accent); }
-
-/* Responsive */
-@media(max-width:480px) {
-  .stats-grid { grid-template-columns:1fr 1fr; }
-  .content { padding:12px; }
-  .balance-big { font-size:32px; }
-}
-
-/* QR */
-.qr-box { background:white; border-radius:12px; padding:16px; display:inline-block; margin:16px 0; }
-.qr-box img { width:180px; height:180px; display:block; }
+:root{--bg:#080810;--s1:#0f0f1c;--s2:#161628;--bd:#1e1e35;--gr:#00e676;--pu:#7c4dff;--re:#ff5252;--yw:#ffab40;--tx:#e8e8f0;--mu:#6b6b8a}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+/* ---- AUTH ---- */
+.auth{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.logo{font-family:monospace;font-size:32px;color:var(--gr);margin-bottom:6px;letter-spacing:-2px}
+.tagline{color:var(--mu);font-size:13px;margin-bottom:40px}
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:20px;padding:28px;width:100%;max-width:400px}
+.card-title{font-size:17px;font-weight:600;margin-bottom:6px}
+.card-sub{color:var(--mu);font-size:13px;margin-bottom:22px;line-height:1.6}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:11px;color:var(--mu);font-family:monospace;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.field input{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:13px 16px;color:var(--tx);font-size:15px;outline:none;transition:border-color .2s}
+.field input:focus{border-color:var(--pu)}
+/* ---- BUTTONS ---- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 20px;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;text-decoration:none}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn-full{width:100%}
+.btn-primary{background:var(--gr);color:#000}
+.btn-primary:hover:not(:disabled){background:#00c853}
+.btn-secondary{background:var(--s2);color:var(--tx);border:1px solid var(--bd)}
+.btn-secondary:hover:not(:disabled){border-color:var(--pu)}
+.btn-danger{background:transparent;color:var(--re);border:1px solid var(--re)}
+.btn-sm{padding:8px 14px;font-size:12px;border-radius:8px}
+/* ---- SPINNER ---- */
+.spin{width:15px;height:15px;border:2.5px solid rgba(0,0,0,.25);border-top-color:rgba(0,0,0,.9);border-radius:50%;animation:rot .65s linear infinite;flex-shrink:0}
+.spin-light{border-color:rgba(255,255,255,.2);border-top-color:#fff}
+@keyframes rot{to{transform:rotate(360deg)}}
+/* ---- ALERTS ---- */
+.alert{padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:16px;line-height:1.5}
+.alert-error{background:#1a0000;border:1px solid var(--re);color:#ff8a80}
+.alert-success{background:#003322;border:1px solid var(--gr);color:#69f0ae}
+.alert-info{background:#001a3a;border:1px solid var(--pu);color:#b388ff}
+/* ---- APP ---- */
+.app{display:none;flex-direction:column;min-height:100vh}
+.app.show{display:flex}
+.topbar{background:var(--s1);border-bottom:1px solid var(--bd);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-logo{font-family:monospace;font-size:17px;color:var(--gr);letter-spacing:-1px}
+.nav{background:var(--s1);border-bottom:1px solid var(--bd);display:flex;overflow-x:auto;padding:0 8px;gap:2px;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav-item{padding:11px 15px;font-size:13px;font-weight:500;color:var(--mu);background:none;border:none;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all .15s;font-family:inherit}
+.nav-item.on{color:var(--gr);border-bottom-color:var(--gr)}
+.main{flex:1;padding:20px;max-width:800px;width:100%;margin:0 auto}
+/* ---- COMPONENTS ---- */
+.sect{background:var(--s1);border:1px solid var(--bd);border-radius:16px;padding:20px;margin-bottom:16px}
+.sect-label{font-size:10px;font-family:monospace;color:var(--mu);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.bal{font-size:38px;font-weight:700;font-family:monospace;color:var(--gr);line-height:1}
+.bal-sub{font-size:13px;color:var(--mu);margin-top:4px}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.stat{background:var(--s2);border:1px solid var(--bd);border-radius:12px;padding:14px;text-align:center}
+.stat-val{font-size:22px;font-weight:700;font-family:monospace}
+.stat-sub{font-size:10px;color:var(--mu);margin-top:3px}
+.inv-item{background:var(--s2);border:1px solid var(--bd);border-radius:12px;padding:15px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color .15s}
+.inv-item:hover{border-color:var(--pu)}
+.inv-desc{font-size:13px;font-weight:500;max-width:58%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.inv-meta{font-size:11px;color:var(--mu);margin-top:3px;font-family:monospace}
+.inv-amt{font-size:15px;font-weight:700;font-family:monospace;text-align:right}
+.badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:9px;font-weight:700;font-family:monospace;margin-top:4px}
+.badge-PAID{background:#003322;color:var(--gr)}
+.badge-PENDING{background:#1a1200;color:var(--yw)}
+.badge-EXPIRED{background:#1a0000;color:var(--re)}
+.fgroup{margin-bottom:18px}
+.fgroup label{display:block;font-size:11px;color:var(--mu);font-family:monospace;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.fgroup input,.fgroup textarea,.fgroup select{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:12px 16px;color:var(--tx);font-size:15px;font-family:inherit;outline:none;transition:border-color .2s}
+.fgroup input:focus,.fgroup textarea:focus{border-color:var(--pu)}
+.fgroup textarea{resize:vertical;min-height:80px}
+.fee-box{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:15px;margin:12px 0;display:none}
+.fee-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:var(--mu)}
+.fee-row.total{border-top:1px solid var(--bd);margin-top:8px;padding-top:10px;font-weight:700;color:var(--gr)}
+.key-box{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:15px;font-family:monospace;font-size:12px;word-break:break-all;color:var(--gr);margin:12px 0;line-height:1.6}
+.link-box{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:14px;font-family:monospace;font-size:12px;word-break:break-all;color:var(--pu);margin:12px 0}
+.row2{display:flex;gap:8px;flex-wrap:wrap}
+.empty{text-align:center;color:var(--mu);padding:36px;font-size:14px}
+.footer-links{margin-top:16px;text-align:center;font-size:12px;color:var(--mu)}
+.footer-links a{color:var(--mu);text-decoration:none;margin:0 8px}
+.footer-links a:hover{color:var(--gr)}
+@media(max-width:480px){.row3{grid-template-columns:1fr 1fr}.main{padding:12px}.bal{font-size:30px}}
 </style>
 </head>
 <body>
 
-<!-- AUTH SCREEN (for browser access) -->
-<div class="auth-screen" id="authScreen">
-  <div class="auth-logo">VERTEXT</div>
-  <div class="auth-sub">Crypto Escrow & Invoicing Platform</div>
-  <div class="auth-card">
-    <div class="auth-title">Merchant Login</div>
-    <div class="auth-desc">Enter your Telegram ID and API key to access your dashboard. Generate your API key with /apikey in the bot.</div>
+<!-- AUTH -->
+<div class="auth" id="authScreen">
+  <div class="logo">VERTEXT</div>
+  <div class="tagline">Crypto Escrow & Invoicing Platform</div>
+  <div class="card">
+    <div class="card-title">Merchant Login</div>
+    <div class="card-sub">Enter your Telegram ID and API key. Generate your key by sending /apikey to the bot.</div>
     <div id="authAlert"></div>
     <div class="field">
       <label>Telegram ID</label>
-      <input type="number" id="loginTgId" placeholder="e.g. 123456789">
+      <input type="number" id="inTgId" placeholder="e.g. 123456789">
     </div>
     <div class="field">
       <label>API Key</label>
-      <input type="text" id="loginApiKey" placeholder="vxt_...">
+      <input type="text" id="inApiKey" placeholder="vxt_...">
     </div>
-    <button class="btn btn-primary" onclick="login()">Access Dashboard</button>
-    <div style="margin-top:16px;text-align:center;font-size:12px;color:var(--muted)">
-      <a href="/terms" style="color:var(--muted)">Terms</a> · 
-      <a href="/privacy" style="color:var(--muted)">Privacy</a> · 
-      <a href="/api-docs" style="color:var(--muted)">API Docs</a>
+    <button class="btn btn-primary btn-full" id="loginBtn" onclick="doLogin()">Access Dashboard</button>
+    <div class="footer-links" style="margin-top:20px">
+      <a href="/terms">Terms</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/api-docs">API Docs</a>
     </div>
   </div>
 </div>
 
-<!-- MAIN APP -->
-<div class="app" id="app">
+<!-- APP -->
+<div class="app" id="appScreen">
   <div class="topbar">
     <div class="topbar-logo">VERTEXT</div>
-    <div style="display:flex;align-items:center;gap:12px">
-      <span class="topbar-user" id="topbarUser"></span>
-      <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
-    </div>
+    <button class="btn btn-secondary btn-sm" onclick="doLogout()">Logout</button>
   </div>
   <nav class="nav">
-    <button class="nav-btn active" onclick="showTab('overview')">Overview</button>
-    <button class="nav-btn" onclick="showTab('invoices')">Invoices</button>
-    <button class="nav-btn" onclick="showTab('create')">Create Invoice</button>
-    <button class="nav-btn" onclick="showTab('wallet')">Wallet</button>
-    <button class="nav-btn" onclick="showTab('api')">API Settings</button>
+    <button class="nav-item on" onclick="goTab('overview',this)">Overview</button>
+    <button class="nav-item" onclick="goTab('invoices',this)">Invoices</button>
+    <button class="nav-item" onclick="goTab('create',this)">Create Invoice</button>
+    <button class="nav-item" onclick="goTab('wallet',this)">Wallet</button>
+    <button class="nav-item" onclick="goTab('api',this)">API Settings</button>
   </nav>
-  <div class="content">
-    <div id="alertBox"></div>
+  <div class="main">
+    <div id="globalAlert"></div>
 
-    <!-- OVERVIEW TAB -->
+    <!-- OVERVIEW -->
     <div id="tab-overview">
-      <div class="card">
-        <div class="card-title">Available Balance</div>
-        <div class="balance-big" id="balanceAmount">$0.0000</div>
-        <div class="balance-unit" id="balanceUnit">USDT · TRC20</div>
-        <div style="margin-top:16px;display:flex;gap:8px">
-          <button class="btn btn-primary btn-sm" onclick="showTab('wallet')">Withdraw</button>
-          <button class="btn btn-secondary btn-sm" onclick="showTab('create')">New Invoice</button>
+      <div class="sect">
+        <div class="sect-label">Available Balance</div>
+        <div class="bal" id="ovBal">—</div>
+        <div class="bal-sub" id="ovSub">USDT</div>
+        <div class="row2" style="margin-top:16px">
+          <button class="btn btn-primary btn-sm" onclick="goTab('wallet',null)">Withdraw</button>
+          <button class="btn btn-secondary btn-sm" onclick="goTab('create',null)">+ New Invoice</button>
         </div>
       </div>
-      <div class="stats-grid" id="statsGrid">
-        <div class="stat"><div class="stat-val" id="statTotal">0</div><div class="stat-label">Invoices</div></div>
-        <div class="stat"><div class="stat-val" style="color:var(--accent)" id="statPaid">0</div><div class="stat-label">Paid</div></div>
-        <div class="stat"><div class="stat-val" style="color:var(--warn)" id="statPending">0</div><div class="stat-label">Pending</div></div>
+      <div class="row3">
+        <div class="stat"><div class="stat-val" id="ovTotal">—</div><div class="stat-sub">Invoices</div></div>
+        <div class="stat"><div class="stat-val" style="color:var(--gr)" id="ovPaid">—</div><div class="stat-sub">Paid</div></div>
+        <div class="stat"><div class="stat-val" style="color:var(--yw)" id="ovPend">—</div><div class="stat-sub">Pending</div></div>
       </div>
-      <div class="card-title" style="margin-bottom:12px">Recent Invoices</div>
-      <div id="recentInvoices"><div class="loading-text">Loading...</div></div>
+      <div class="sect-label" style="margin-bottom:10px">Recent Invoices</div>
+      <div id="ovList"><div class="empty">Loading...</div></div>
     </div>
 
-    <!-- INVOICES TAB -->
+    <!-- INVOICES -->
     <div id="tab-invoices" style="display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h2 style="font-size:20px;font-weight:700">My Invoices</h2>
-        <button class="btn btn-primary btn-sm" onclick="showTab('create')">+ New</button>
+        <div style="font-size:18px;font-weight:700">My Invoices</div>
+        <button class="btn btn-primary btn-sm" onclick="goTab('create',null)">+ New</button>
       </div>
-      <div id="invoicesList"><div class="loading-text">Loading...</div></div>
+      <div id="invList"><div class="empty">Loading...</div></div>
     </div>
 
-    <!-- CREATE INVOICE TAB -->
+    <!-- CREATE INVOICE -->
     <div id="tab-create" style="display:none">
-      <h2 style="font-size:20px;font-weight:700;margin-bottom:20px">Create Invoice</h2>
-      <div class="card">
+      <div style="font-size:18px;font-weight:700;margin-bottom:18px">Create Invoice</div>
+      <div class="sect">
         <div id="createAlert"></div>
-        <div class="form-group">
+        <div class="fgroup">
           <label>Amount (USD)</label>
-          <input type="number" id="invAmount" placeholder="50.00" min="1" step="0.01">
+          <input type="number" id="cAmount" placeholder="50.00" min="1" step="0.01">
         </div>
-        <div class="form-group">
+        <div class="fgroup">
           <label>Description</label>
-          <textarea id="invDesc" placeholder="e.g. Website design deposit"></textarea>
+          <textarea id="cDesc" placeholder="e.g. Website design deposit"></textarea>
         </div>
-        <button class="btn btn-primary" id="createInvoiceBtn" onclick="createInvoiceWeb()">Generate Invoice Link</button>
+        <button class="btn btn-primary btn-full" id="createBtn" onclick="doCreateInvoice()">Generate Invoice Link</button>
       </div>
-      <div id="invoiceResult" style="display:none">
-        <div class="card">
-          <div class="card-title">Invoice Created</div>
-          <div class="link-box" id="invoiceLinkBox"></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="copy-btn" onclick="copyInvoiceLink()">Copy Link</button>
-            <button class="copy-btn" onclick="openInvoiceLink()">Open Link</button>
+      <div id="createResult" style="display:none">
+        <div class="sect">
+          <div class="sect-label">Invoice Created</div>
+          <div class="link-box" id="createLink"></div>
+          <div class="row2">
+            <button class="btn btn-secondary btn-sm" onclick="doCopyLink()">Copy Link</button>
+            <button class="btn btn-secondary btn-sm" onclick="window.open(currentLink,'_blank')">Open</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- WALLET TAB -->
+    <!-- WALLET -->
     <div id="tab-wallet" style="display:none">
-      <h2 style="font-size:20px;font-weight:700;margin-bottom:20px">My Wallet</h2>
-      <div class="card">
-        <div class="card-title">Balance</div>
-        <div class="balance-big" id="walletBalance">$0.0000</div>
-        <div class="balance-unit" id="walletUnit">USDT</div>
-        <div style="margin-top:12px;font-size:13px;color:var(--muted)">
-          Payout Address: <span style="font-family:var(--mono);color:var(--text);font-size:12px" id="walletAddress">—</span>
-        </div>
-        <div style="margin-top:4px;font-size:13px;color:var(--muted)">
-          Locked in disputes: <span style="color:var(--danger);font-family:var(--mono)" id="lockedAmount">$0.0000</span>
-        </div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:18px">My Wallet</div>
+      <div class="sect">
+        <div class="sect-label">Balance</div>
+        <div class="bal" id="wBal">—</div>
+        <div style="font-size:13px;color:var(--mu);margin-top:6px">Network: <span id="wNet">—</span></div>
+        <div style="font-size:12px;color:var(--mu);margin-top:2px;font-family:monospace;word-break:break-all" id="wAddr">—</div>
+        <div style="font-size:13px;color:var(--re);margin-top:6px">Locked (disputes): <span id="wLocked">$0.0000</span></div>
       </div>
-      <div class="card">
-        <div class="card-title">Withdraw Funds</div>
-        <div id="withdrawAlert"></div>
-        <div class="form-group">
-          <label>Amount to Withdraw (USD)</label>
-          <input type="number" id="wdAmount" placeholder="e.g. 45.00" min="0.01" step="0.01">
+      <div class="sect">
+        <div class="sect-label">Withdraw Funds</div>
+        <div id="wAlert"></div>
+        <div class="fgroup">
+          <label>Amount (USD)</label>
+          <input type="number" id="wAmount" placeholder="e.g. 45.00" min="0.01" step="0.01">
         </div>
-        <div class="fee-breakdown" id="feeBreakdown" style="display:none">
-          <div class="fee-row"><span>Requested Amount</span><span id="feeGross">—</span></div>
-          <div class="fee-row"><span>Network Fee</span><span id="feeNetwork">~$1.00</span></div>
-          <div class="fee-row"><span>Platform Fee</span><span id="feePlatform">$1.00</span></div>
-          <div class="fee-row total"><span>You Receive</span><span id="feeNet">—</span></div>
+        <div class="fee-box" id="feeBox">
+          <div class="fee-row"><span>Requested</span><span id="fGross">—</span></div>
+          <div class="fee-row"><span>Network Fee</span><span id="fNet2">~$1.00</span></div>
+          <div class="fee-row"><span>Platform Fee</span><span>$1.00</span></div>
+          <div class="fee-row total"><span>You Receive</span><span id="fNet">—</span></div>
         </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-secondary btn-sm" onclick="calcFees()" style="flex:1">Calculate Fees</button>
-          <button class="btn btn-primary btn-sm" onclick="requestWithdraw()" style="flex:1" id="wdBtn" disabled>Withdraw</button>
+        <div class="row2">
+          <button class="btn btn-secondary" style="flex:1" onclick="doCalcFees()">Calculate Fees</button>
+          <button class="btn btn-primary" style="flex:1" id="wdBtn" onclick="doWithdraw()" disabled>Withdraw</button>
         </div>
-        <div style="margin-top:12px;font-size:12px;color:var(--muted)">
-          Withdrawals are processed via the bot. You will receive a confirmation message on Telegram.
-        </div>
+        <div style="font-size:12px;color:var(--mu);margin-top:10px">A confirmation will be sent to your Telegram.</div>
       </div>
-      <div class="card">
-        <div class="card-title">Recent Withdrawals</div>
-        <div id="wdList"><div class="loading-text">Loading...</div></div>
+      <div class="sect">
+        <div class="sect-label">Withdrawal History</div>
+        <div id="wdHist"><div class="empty">Loading...</div></div>
       </div>
     </div>
 
-    <!-- API SETTINGS TAB -->
+    <!-- API SETTINGS -->
     <div id="tab-api" style="display:none">
-      <h2 style="font-size:20px;font-weight:700;margin-bottom:20px">API Settings</h2>
-      <div class="card">
-        <div class="card-title">Your API Key</div>
-        <div id="apiKeyDisplay"><div class="loading-text">Loading...</div></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-          <button class="btn btn-primary btn-sm" onclick="generateApiKey()">Generate New Key</button>
-          <button class="copy-btn" onclick="copyApiKey()" id="copyKeyBtn" style="display:none">Copy Key</button>
+      <div style="font-size:18px;font-weight:700;margin-bottom:18px">API Settings</div>
+      <div class="sect">
+        <div class="sect-label">API Key</div>
+        <div id="apiKeyBox"><div style="color:var(--mu);font-size:13px">No key generated yet.</div></div>
+        <div class="row2" style="margin-top:14px">
+          <button class="btn btn-primary btn-sm" id="genKeyBtn" onclick="doGenKey()">Generate New Key</button>
+          <button class="btn btn-secondary btn-sm" id="copyKeyBtn" style="display:none" onclick="doCopyKey()">Copy Key</button>
         </div>
       </div>
-      <div class="card">
-        <div class="card-title">Webhook URL</div>
-        <div id="webhookDisplay" style="font-size:13px;color:var(--muted);margin-bottom:12px">Not configured</div>
-        <div class="form-group">
+      <div class="sect">
+        <div class="sect-label">Webhook URL</div>
+        <div id="whDisplay" style="font-size:13px;color:var(--mu);margin-bottom:12px">Not configured</div>
+        <div class="fgroup">
           <label>Set Webhook URL (HTTPS only)</label>
-          <input type="url" id="webhookUrl" placeholder="https://yoursite.com/webhook">
+          <input type="url" id="whInput" placeholder="https://yoursite.com/webhook">
         </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-primary btn-sm" onclick="saveWebhook()">Save Webhook</button>
-          <button class="btn btn-danger btn-sm" onclick="removeWebhook()">Remove</button>
+        <div class="row2">
+          <button class="btn btn-primary btn-sm" id="saveWhBtn" onclick="doSaveWebhook()">Save</button>
+          <button class="btn btn-danger btn-sm" id="delWhBtn" onclick="doDelWebhook()">Remove</button>
         </div>
       </div>
-      <div class="card">
-        <div class="card-title">API Documentation</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Build integrations using the Vertext REST API.</div>
-        <a href="/api-docs" target="_blank" class="btn btn-secondary btn-sm" style="display:inline-block;text-decoration:none;text-align:center">View API Docs →</a>
+      <div class="sect">
+        <div class="sect-label">Documentation</div>
+        <div style="font-size:13px;color:var(--mu);margin-bottom:12px">Build integrations with the Vertext REST API.</div>
+        <a href="/api-docs" target="_blank" class="btn btn-secondary btn-sm">View API Docs →</a>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- Invoice Detail Modal -->
-<div class="modal-overlay" id="invoiceModal">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal()">×</button>
-    <div class="modal-title">Invoice Details</div>
-    <div id="modalContent"></div>
   </div>
 </div>
 
 <script>
-const tg = window.Telegram?.WebApp;
-let SESSION = { userId: null, apiKey: null, merchant: null };
-let currentInvoiceLink = '';
+// ── State ────────────────────────────────────────────────────────────────────
+let S = { userId: null, apiKey: null };
+let currentLink = '';
 let currentApiKey = '';
 
-// ── Init ────────────────────────────────────────────────────────────────────
+// ── Spinner helper ────────────────────────────────────────────────────────────
+function btnLoad(id, on, label) {
+  const b = typeof id === 'string' ? document.getElementById(id) : id;
+  if (!b) return;
+  b.disabled = on;
+  if (on) {
+    b._orig = b.innerHTML;
+    const spinClass = b.classList.contains('btn-primary') ? 'spin' : 'spin spin-light';
+    b.innerHTML = '<span class="' + spinClass + '"></span>' + (label || 'Loading...');
+  } else {
+    b.innerHTML = b._orig || label || 'Submit';
+  }
+}
+
+function alert_(containerId, msg, type) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!msg) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="alert alert-' + type + '">' + msg + '</div>';
+}
+
+function gAlert(msg, type) {
+  alert_('globalAlert', msg, type);
+  if (msg) setTimeout(() => alert_('globalAlert', '', ''), 5000);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('load', async () => {
+  const tg = window.Telegram?.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
 
-  // Check Telegram Mini App
   const tgUser = tg?.initDataUnsafe?.user;
   if (tgUser?.id) {
-    // Auto-login with Telegram ID (no API key needed in Mini App)
-    SESSION.userId = tgUser.id;
-    SESSION.apiKey = 'tg_auth';
-    try {
-      const res = await fetch('/api/dashboard?user_id=' + tgUser.id);
-      if (res.ok) {
-        const data = await res.json();
-        SESSION.merchant = data.merchant;
-        showApp(tgUser.first_name || 'Merchant', data);
-        return;
-      }
-    } catch {}
+    S.userId = tgUser.id;
+    S.apiKey = 'tg_auth';
+    await loadAndShow();
+    return;
   }
 
-  // Check saved session
-  const saved = localStorage.getItem('vxt_session');
+  const saved = localStorage.getItem('vxt_s');
   if (saved) {
     try {
-      SESSION = JSON.parse(saved);
-      const res = await fetch('/api/dashboard?user_id=' + SESSION.userId + '&api_key=' + SESSION.apiKey);
-      if (res.ok) {
-        const data = await res.json();
-        SESSION.merchant = data.merchant;
-        showApp('Merchant #' + SESSION.userId, data);
-        return;
-      }
-    } catch {}
-    localStorage.removeItem('vxt_session');
-  }
-
-  document.getElementById('authScreen').style.display = 'flex';
+      const p = JSON.parse(saved);
+      S = p;
+      const ok = await loadAndShow();
+      if (!ok) { localStorage.removeItem('vxt_s'); showAuth(); }
+    } catch { showAuth(); }
+  } else { showAuth(); }
 });
 
-async function login() {
-  const tgId = document.getElementById('loginTgId').value.trim();
-  const apiKey = document.getElementById('loginApiKey').value.trim();
-  if (!tgId || !apiKey) { showAuthAlert('Please enter both fields.', 'error'); return; }
+function showAuth() {
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('appScreen').classList.remove('show');
+}
 
-  const btn = document.querySelector('.auth-card .btn-primary');
-  setLoading(btn, true, 'Accessing Dashboard...');
-  showAuthAlert('Connecting to server...', 'info');
+async function loadAndShow() {
+  const res = await fetch('/api/dashboard?user_id=' + S.userId + '&api_key=' + S.apiKey).catch(() => null);
+  if (!res || !res.ok) return false;
+  const data = await res.json();
+  renderApp(data);
+  return true;
+}
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const tgId = document.getElementById('inTgId').value.trim();
+  const key = document.getElementById('inApiKey').value.trim();
+  if (!tgId || !key) { alert_('authAlert', 'Please enter both Telegram ID and API key.', 'error'); return; }
+
+  btnLoad('loginBtn', true, 'Connecting...');
+  alert_('authAlert', 'Verifying credentials...', 'info');
 
   try {
-    const res = await fetch('/api/dashboard?user_id=' + tgId + '&api_key=' + apiKey);
+    const res = await fetch('/api/dashboard?user_id=' + tgId + '&api_key=' + key);
     const data = await res.json();
+
     if (!res.ok) {
-      showAuthAlert(data.error || 'Invalid credentials. Check your Telegram ID and API key.', 'error');
-      setLoading(btn, false, 'Access Dashboard');
+      alert_('authAlert', data.error || 'Login failed. Check your credentials.', 'error');
+      btnLoad('loginBtn', false, 'Access Dashboard');
       return;
     }
-    SESSION = { userId: parseInt(tgId), apiKey, merchant: data.merchant };
-    localStorage.setItem('vxt_session', JSON.stringify({ userId: SESSION.userId, apiKey: SESSION.apiKey }));
-    showApp('Merchant #' + tgId, data);
+
+    S = { userId: parseInt(tgId), apiKey: key };
+    localStorage.setItem('vxt_s', JSON.stringify(S));
+    alert_('authAlert', '', '');
+    renderApp(data);
   } catch (e) {
-    showAuthAlert('Connection failed: ' + e.message + '. Check your internet.', 'error');
-    setLoading(btn, false, 'Access Dashboard');
+    alert_('authAlert', 'Connection error: ' + e.message, 'error');
+    btnLoad('loginBtn', false, 'Access Dashboard');
   }
 }
 
-function logout() {
-  localStorage.removeItem('vxt_session');
-  SESSION = { userId: null, apiKey: null, merchant: null };
-  document.getElementById('app').classList.remove('visible');
+function doLogout() {
+  localStorage.removeItem('vxt_s');
+  S = { userId: null, apiKey: null };
+  document.getElementById('appScreen').classList.remove('show');
   document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('loginBtn').innerHTML = 'Access Dashboard';
+  document.getElementById('loginBtn').disabled = false;
 }
 
-function showAuthAlert(msg, type) {
-  const cls = type === 'error' ? 'error' : type === 'info' ? 'info' : 'success';
-  document.getElementById('authAlert').innerHTML = '<div class="alert alert-' + cls + '">' + msg + '</div>';
-}
-
-function setLoading(btn, loading, originalText) {
-  if (!btn) return;
-  if (loading) {
-    btn.disabled = true;
-    btn.dataset.original = btn.textContent;
-    btn.innerHTML = '<span class="spinner-inline"></span> ' + originalText;
-  } else {
-    btn.disabled = false;
-    btn.textContent = originalText || btn.dataset.original || 'Submit';
-  }
-}
-
-// ── App Init ─────────────────────────────────────────────────────────────────
-function showApp(name, data) {
+// ── Render App ────────────────────────────────────────────────────────────────
+function renderApp(data) {
   document.getElementById('authScreen').style.display = 'none';
-  document.getElementById('app').classList.add('visible');
-  document.getElementById('topbarUser').textContent = name;
-  renderOverview(data);
-  loadWallet();
-  loadApiSettings();
-}
-
-// ── Tab Navigation ────────────────────────────────────────────────────────────
-function showTab(tab) {
-  document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');
-  document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-  document.getElementById('tab-' + tab).style.display = 'block';
-  const tabs = ['overview','invoices','create','wallet','api'];
-  const idx = tabs.indexOf(tab);
-  document.querySelectorAll('.nav-btn')[idx]?.classList.add('active');
-  if (tab === 'invoices') loadInvoices();
-  if (tab === 'wallet') loadWallet();
-  if (tab === 'api') loadApiSettings();
-}
-
-// ── Overview ──────────────────────────────────────────────────────────────────
-function renderOverview(data) {
+  document.getElementById('appScreen').classList.add('show');
   const m = data.merchant;
   const inv = data.invoices || [];
   const paid = inv.filter(i => i.status === 'PAID').length;
-  const pending = inv.filter(i => i.status === 'PENDING').length;
-  document.getElementById('balanceAmount').textContent = '$' + Number(m.internal_balance).toFixed(4);
-  document.getElementById('balanceUnit').textContent = 'USDT · ' + m.payout_network;
-  document.getElementById('statTotal').textContent = inv.length;
-  document.getElementById('statPaid').textContent = paid;
-  document.getElementById('statPending').textContent = pending;
-  renderInvoiceList(inv.slice(0, 5), 'recentInvoices');
+  const pend = inv.filter(i => i.status === 'PENDING').length;
+  document.getElementById('ovBal').textContent = '$' + Number(m.internal_balance).toFixed(4);
+  document.getElementById('ovSub').textContent = 'USDT on ' + m.payout_network;
+  document.getElementById('ovTotal').textContent = inv.length;
+  document.getElementById('ovPaid').textContent = paid;
+  document.getElementById('ovPend').textContent = pend;
+  document.getElementById('wBal').textContent = '$' + Number(m.internal_balance).toFixed(4);
+  document.getElementById('wNet').textContent = m.payout_network;
+  document.getElementById('wAddr').textContent = m.payout_address || '—';
+  document.getElementById('wLocked').textContent = '$' + Number(m.locked_amount || 0).toFixed(4);
+  renderInvList(inv.slice(0, 5), 'ovList');
+  renderInvList(inv, 'invList');
+  if (m.api_key) {
+    currentApiKey = m.api_key;
+    document.getElementById('apiKeyBox').innerHTML = '<div class="key-box">' + m.api_key + '</div><div style="font-size:12px;color:var(--mu)">Use this to authenticate API requests.</div>';
+    document.getElementById('copyKeyBtn').style.display = 'inline-flex';
+  }
+  if (m.webhook_url) {
+    document.getElementById('whDisplay').textContent = m.webhook_url;
+    document.getElementById('whInput').value = m.webhook_url;
+  }
+  loadWdHistory();
 }
 
-// ── Invoices ──────────────────────────────────────────────────────────────────
-async function loadInvoices() {
-  document.getElementById('invoicesList').innerHTML = '<div class="spinner"></div>';
-  try {
-    const res = await fetch('/api/dashboard?user_id=' + SESSION.userId + '&api_key=' + SESSION.apiKey);
-    const data = await res.json();
-    renderInvoiceList(data.invoices || [], 'invoicesList');
-  } catch { document.getElementById('invoicesList').innerHTML = '<div class="loading-text">Failed to load invoices.</div>'; }
+// ── Tab Navigation ─────────────────────────────────────────────────────────────
+function goTab(name, btnEl) {
+  document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
+  document.getElementById('tab-' + name).style.display = 'block';
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('on'));
+  if (btnEl) btnEl.classList.add('on');
+  else {
+    const tabs = ['overview','invoices','create','wallet','api'];
+    const btn = document.querySelectorAll('.nav-item')[tabs.indexOf(name)];
+    if (btn) btn.classList.add('on');
+  }
+  if (name === 'wallet') loadWdHistory();
 }
 
-function renderInvoiceList(invoices, containerId) {
+// ── Invoice List ──────────────────────────────────────────────────────────────
+function renderInvList(arr, containerId) {
   const el = document.getElementById(containerId);
-  if (!invoices.length) { el.innerHTML = '<div class="loading-text">No invoices yet.</div>'; return; }
-  el.innerHTML = invoices.map(inv => {
-    const status = inv.status === 'PAID' ? 'paid' : inv.status === 'EXPIRED' ? 'expired' : 'pending';
-    const dispute = inv.dispute_status === 'OPEN' ? '<span class="badge badge-open">DISPUTE</span>' : '';
-    return '<div class="inv-item" onclick="showInvoiceDetail(' + "'" + inv.invoice_id + "'" + ')">' +
-      '<div><div class="inv-desc">' + inv.description.slice(0,40) + '</div>' +
-      '<div class="inv-meta">' + new Date(inv.created_at).toLocaleDateString() + ' · ' + inv.invoice_id.slice(0,8) + '...</div></div>' +
-      '<div style="text-align:right"><div class="inv-amount">$' + Number(inv.amount_fiat).toFixed(2) + '</div>' +
-      '<span class="badge badge-' + status + '">' + inv.status + '</span>' + dispute + '</div></div>';
+  if (!arr.length) { el.innerHTML = '<div class="empty">No invoices yet.</div>'; return; }
+  el.innerHTML = arr.map(inv => {
+    const s = inv.status || 'PENDING';
+    const link = 'https://t.me/' + 'Vertextmarketbot' + '?start=inv_' + inv.invoice_id;
+    return '<div class="inv-item" onclick="navigator.clipboard.writeText(\'' + link + '\').then(()=>gAlert(\'Link copied!\',\'success\'))">' +
+      '<div><div class="inv-desc">' + (inv.description || '').slice(0, 40) + '</div>' +
+      '<div class="inv-meta">' + new Date(inv.created_at).toLocaleDateString() + '</div></div>' +
+      '<div style="text-align:right"><div class="inv-amt">$' + Number(inv.amount_fiat).toFixed(2) + '</div>' +
+      '<span class="badge badge-' + s + '">' + s + '</span></div></div>';
   }).join('');
 }
 
-function showInvoiceDetail(invoiceId) {
-  const botUser = window.location.hostname.includes('render') ? 'Vertextmarketbot' : 'Vertextmarketbot';
-  const link = 'https://t.me/' + botUser + '?start=inv_' + invoiceId;
-  document.getElementById('modalContent').innerHTML =
-    '<div class="form-group"><label>Invoice ID</label><div class="apikey-box" style="font-size:11px">' + invoiceId + '</div></div>' +
-    '<div class="form-group"><label>Payment Link</label><div class="link-box">' + link + '</div></div>' +
-    '<div style="display:flex;gap:8px">' +
-    '<button class="copy-btn" onclick="navigator.clipboard.writeText(\'' + link + '\')">Copy Link</button>' +
-    '<a href="' + link + '" target="_blank" class="copy-btn" style="text-decoration:none">Open Link</a></div>';
-  document.getElementById('invoiceModal').classList.add('open');
-}
+// ── Create Invoice ─────────────────────────────────────────────────────────────
+async function doCreateInvoice() {
+  const amount = parseFloat(document.getElementById('cAmount').value);
+  const desc = document.getElementById('cDesc').value.trim();
+  if (!amount || amount < 1) { alert_('createAlert', 'Minimum amount is $1.00', 'error'); return; }
+  if (!desc) { alert_('createAlert', 'Please enter a description.', 'error'); return; }
 
-function closeModal() { document.getElementById('invoiceModal').classList.remove('open'); }
+  btnLoad('createBtn', true, 'Creating...');
+  alert_('createAlert', 'Creating invoice...', 'info');
+  document.getElementById('createResult').style.display = 'none';
 
-// ── Create Invoice ────────────────────────────────────────────────────────────
-async function createInvoiceWeb() {
-  const amount = parseFloat(document.getElementById('invAmount').value);
-  const desc = document.getElementById('invDesc').value.trim();
-  const alertEl = document.getElementById('createAlert');
-  if (!amount || amount < 1) { alertEl.innerHTML = '<div class="alert alert-error">Minimum amount is $1.00</div>'; return; }
-  if (!desc) { alertEl.innerHTML = '<div class="alert alert-error">Please enter a description.</div>'; return; }
-  const btn = document.getElementById('createInvoiceBtn');
-  setLoading(btn, true, 'Creating...');
-  alertEl.innerHTML = '<div class="alert alert-info">Creating invoice...</div>';
   try {
     const res = await fetch('/api/invoices', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Merchant-Id': SESSION.userId, 'X-Api-Key': SESSION.apiKey },
+      headers: { 'Content-Type': 'application/json', 'X-Merchant-Id': S.userId, 'X-Api-Key': S.apiKey },
       body: JSON.stringify({ amount, description: desc }),
     });
     const data = await res.json();
-    setLoading(btn, false, 'Generate Invoice Link');
-    if (!res.ok) { alertEl.innerHTML = '<div class="alert alert-error">' + (data.error || 'Failed') + '</div>'; return; }
-    alertEl.innerHTML = '<div class="alert alert-success">Invoice created successfully!</div>';
-    currentInvoiceLink = data.link;
-    document.getElementById('invoiceLinkBox').textContent = data.link;
-    document.getElementById('invoiceResult').style.display = 'block';
-  } catch (e) { setLoading(btn, false, 'Generate Invoice Link'); alertEl.innerHTML = '<div class="alert alert-error">Error: ' + e.message + '</div>'; }
+    btnLoad('createBtn', false, 'Generate Invoice Link');
+    if (!res.ok) { alert_('createAlert', data.error || 'Failed to create invoice.', 'error'); return; }
+    alert_('createAlert', 'Invoice created!', 'success');
+    currentLink = data.link;
+    document.getElementById('createLink').textContent = data.link;
+    document.getElementById('createResult').style.display = 'block';
+  } catch (e) {
+    btnLoad('createBtn', false, 'Generate Invoice Link');
+    alert_('createAlert', 'Error: ' + e.message, 'error');
+  }
 }
 
-function copyInvoiceLink() { navigator.clipboard.writeText(currentInvoiceLink); showAlert('Link copied!', 'success'); }
-function openInvoiceLink() { window.open(currentInvoiceLink, '_blank'); }
+function doCopyLink() { navigator.clipboard.writeText(currentLink).then(() => gAlert('Link copied!', 'success')); }
 
-// ── Wallet ────────────────────────────────────────────────────────────────────
-async function loadWallet() {
+// ── Wallet ─────────────────────────────────────────────────────────────────────
+async function loadWdHistory() {
   try {
-    const res = await fetch('/api/dashboard?user_id=' + SESSION.userId + '&api_key=' + SESSION.apiKey);
+    const res = await fetch('/api/withdrawals?user_id=' + S.userId + '&api_key=' + S.apiKey);
     const data = await res.json();
-    const m = data.merchant;
-    document.getElementById('walletBalance').textContent = '$' + Number(m.internal_balance).toFixed(4);
-    document.getElementById('walletUnit').textContent = 'USDT on ' + m.payout_network;
-    document.getElementById('walletAddress').textContent = m.payout_address || '—';
-    document.getElementById('lockedAmount').textContent = '$' + Number(m.locked_amount || 0).toFixed(4);
-    const wdRes = await fetch('/api/withdrawals?user_id=' + SESSION.userId + '&api_key=' + SESSION.apiKey);
-    const wdData = await wdRes.json();
-    const wds = wdData.withdrawals || [];
-    document.getElementById('wdList').innerHTML = wds.length ? wds.slice(0,10).map(w =>
+    const wds = data.withdrawals || [];
+    document.getElementById('wdHist').innerHTML = wds.length ? wds.slice(0,10).map(w =>
       '<div class="inv-item"><div><div class="inv-desc">Withdrawal</div><div class="inv-meta">' + new Date(w.created_at).toLocaleDateString() + '</div></div>' +
-      '<div style="text-align:right"><div class="inv-amount">$' + Number(w.net_payout).toFixed(4) + '</div>' +
-      '<span class="badge badge-' + (w.status==='COMPLETED'?'paid':'pending') + '">' + w.status + '</span></div></div>'
-    ).join('') : '<div class="loading-text">No withdrawals yet.</div>';
+      '<div style="text-align:right"><div class="inv-amt">$' + Number(w.net_payout).toFixed(4) + '</div>' +
+      '<span class="badge badge-' + (w.status === 'COMPLETED' ? 'PAID' : 'PENDING') + '">' + w.status + '</span></div></div>'
+    ).join('') : '<div class="empty">No withdrawals yet.</div>';
   } catch {}
 }
 
-function calcFees() {
-  const amount = parseFloat(document.getElementById('wdAmount').value);
-  if (!amount || amount <= 0) { document.getElementById('withdrawAlert').innerHTML = '<div class="alert alert-error">Enter a valid amount.</div>'; return; }
-  const networkFee = 1.0;
-  const platformFee = 1.0;
-  const net = amount - networkFee - platformFee;
-  if (net <= 0) { document.getElementById('withdrawAlert').innerHTML = '<div class="alert alert-error">Amount too small to cover fees. Min: $' + (networkFee + platformFee + 0.01).toFixed(2) + '</div>'; return; }
-  document.getElementById('feeGross').textContent = '$' + amount.toFixed(4);
-  document.getElementById('feeNetwork').textContent = '~$' + networkFee.toFixed(4);
-  document.getElementById('feePlatform').textContent = '$' + platformFee.toFixed(2);
-  document.getElementById('feeNet').textContent = '$' + net.toFixed(4) + ' USDT';
-  document.getElementById('feeBreakdown').style.display = 'block';
+function doCalcFees() {
+  const amount = parseFloat(document.getElementById('wAmount').value);
+  if (!amount || amount <= 0) { alert_('wAlert', 'Enter a valid amount first.', 'error'); return; }
+  const net = amount - 2.0;
+  if (net <= 0) { alert_('wAlert', 'Amount too small. Minimum: $2.01', 'error'); return; }
+  document.getElementById('fGross').textContent = '$' + amount.toFixed(4);
+  document.getElementById('fNet').textContent = '$' + net.toFixed(4) + ' USDT';
+  document.getElementById('feeBox').style.display = 'block';
   document.getElementById('wdBtn').disabled = false;
-  document.getElementById('withdrawAlert').innerHTML = '';
+  alert_('wAlert', '', '');
 }
 
-async function requestWithdraw() {
-  const amount = parseFloat(document.getElementById('wdAmount').value);
+async function doWithdraw() {
+  const amount = parseFloat(document.getElementById('wAmount').value);
   if (!amount) return;
-  const btn = document.getElementById('wdBtn');
-  setLoading(btn, true, 'Sending...');
-  document.getElementById('withdrawAlert').innerHTML = '<div class="alert alert-info">Processing withdrawal request...</div>';
+  btnLoad('wdBtn', true, 'Sending...');
+  alert_('wAlert', 'Processing withdrawal...', 'info');
   try {
     const res = await fetch('/api/withdraw', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Merchant-Id': SESSION.userId, 'X-Api-Key': SESSION.apiKey },
+      headers: { 'Content-Type': 'application/json', 'X-Merchant-Id': S.userId, 'X-Api-Key': S.apiKey },
       body: JSON.stringify({ amount }),
     });
     const data = await res.json();
-    if (!res.ok) {
-      document.getElementById('withdrawAlert').innerHTML = '<div class="alert alert-error">' + (data.error || 'Failed') + '</div>';
-      setLoading(btn, false, 'Withdraw');
-      btn.disabled = false;
-    } else {
-      document.getElementById('withdrawAlert').innerHTML = '<div class="alert alert-success">Withdrawal initiated! Check your Telegram to confirm.</div>';
-      setLoading(btn, false, 'Withdraw');
-    }
+    btnLoad('wdBtn', false, 'Withdraw');
+    if (!res.ok) { alert_('wAlert', data.error || 'Failed.', 'error'); document.getElementById('wdBtn').disabled = false; return; }
+    alert_('wAlert', 'Withdrawal sent! Check Telegram to confirm.', 'success');
   } catch (e) {
-    document.getElementById('withdrawAlert').innerHTML = '<div class="alert alert-error">' + e.message + '</div>';
-    setLoading(btn, false, 'Withdraw');
+    btnLoad('wdBtn', false, 'Withdraw');
+    document.getElementById('wdBtn').disabled = false;
+    alert_('wAlert', 'Error: ' + e.message, 'error');
   }
 }
 
 // ── API Settings ──────────────────────────────────────────────────────────────
-async function loadApiSettings() {
-  try {
-    const res = await fetch('/api/dashboard?user_id=' + SESSION.userId + '&api_key=' + SESSION.apiKey);
-    const data = await res.json();
-    const m = data.merchant;
-    currentApiKey = m.api_key || '';
-    if (m.api_key) {
-      document.getElementById('apiKeyDisplay').innerHTML = '<div class="apikey-box">' + m.api_key + '</div><div style="font-size:12px;color:var(--muted)">Keep this secret. Use it to verify webhook signatures.</div>';
-      document.getElementById('copyKeyBtn').style.display = 'inline-block';
-    } else {
-      document.getElementById('apiKeyDisplay').innerHTML = '<div style="color:var(--muted);font-size:13px">No API key generated yet. Click below to generate one.</div>';
-    }
-    document.getElementById('webhookDisplay').textContent = m.webhook_url || 'Not configured';
-    if (m.webhook_url) document.getElementById('webhookUrl').value = m.webhook_url;
-  } catch {}
-}
-
-async function generateApiKey() {
-  const btn = document.querySelector('#tab-api .btn-primary');
-  setLoading(btn, true, 'Generating...');
+async function doGenKey() {
+  btnLoad('genKeyBtn', true, 'Generating...');
   try {
     const res = await fetch('/api/apikey', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Merchant-Id': SESSION.userId, 'X-Api-Key': SESSION.apiKey || 'none' },
+      headers: { 'X-Merchant-Id': S.userId, 'X-Api-Key': S.apiKey || 'none' },
     });
     const data = await res.json();
-    setLoading(btn, false, 'Generate New Key');
-    if (!res.ok) { showAlert(data.error || 'Failed to generate key', 'error'); return; }
+    btnLoad('genKeyBtn', false, 'Generate New Key');
+    if (!res.ok) { gAlert(data.error || 'Failed.', 'error'); return; }
     currentApiKey = data.api_key;
-    document.getElementById('apiKeyDisplay').innerHTML = '<div class="apikey-box">' + data.api_key + '</div><div style="font-size:12px;color:var(--muted);margin-top:8px">Save this key — use it to login here and authenticate API requests.</div>';
-    document.getElementById('copyKeyBtn').style.display = 'inline-block';
-    showAlert('API key generated! Copy it now.', 'success');
-    SESSION.apiKey = data.api_key;
-    localStorage.setItem('vxt_session', JSON.stringify({ userId: SESSION.userId, apiKey: SESSION.apiKey }));
-  } catch (e) { setLoading(btn, false, 'Generate New Key'); showAlert('Error: ' + e.message, 'error'); }
+    S.apiKey = data.api_key;
+    localStorage.setItem('vxt_s', JSON.stringify(S));
+    document.getElementById('apiKeyBox').innerHTML = '<div class="key-box">' + data.api_key + '</div><div style="font-size:12px;color:var(--mu);margin-top:6px">Copy and save this key — use it to login to this dashboard.</div>';
+    document.getElementById('copyKeyBtn').style.display = 'inline-flex';
+    gAlert('API key generated! Copy it now.', 'success');
+  } catch (e) {
+    btnLoad('genKeyBtn', false, 'Generate New Key');
+    gAlert('Error: ' + e.message, 'error');
+  }
 }
 
-function copyApiKey() { navigator.clipboard.writeText(currentApiKey); showAlert('API key copied!', 'success'); }
+function doCopyKey() { navigator.clipboard.writeText(currentApiKey).then(() => gAlert('API key copied!', 'success')); }
 
-async function saveWebhook() {
-  const url = document.getElementById('webhookUrl').value.trim();
-  if (!url.startsWith('https://')) { showAlert('Webhook URL must use HTTPS', 'error'); return; }
-  const btns = document.querySelectorAll('#tab-api .btn-primary, #tab-api .btn-danger');
-  btns.forEach(b => b.disabled = true);
+async function doSaveWebhook() {
+  const url = document.getElementById('whInput').value.trim();
+  if (!url.startsWith('https://')) { gAlert('Webhook URL must use HTTPS.', 'error'); return; }
+  btnLoad('saveWhBtn', true, 'Saving...');
   try {
     const res = await fetch('/api/webhook-url', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Merchant-Id': SESSION.userId, 'X-Api-Key': SESSION.apiKey },
+      headers: { 'Content-Type': 'application/json', 'X-Merchant-Id': S.userId, 'X-Api-Key': S.apiKey },
       body: JSON.stringify({ webhook_url: url }),
     });
+    btnLoad('saveWhBtn', false, 'Save');
     const data = await res.json();
-    btns.forEach(b => b.disabled = false);
-    if (!res.ok) { showAlert(data.error || 'Failed', 'error'); return; }
-    document.getElementById('webhookDisplay').textContent = url;
-    showAlert('Webhook URL saved!', 'success');
-  } catch (e) { btns.forEach(b => b.disabled = false); showAlert('Error: ' + e.message, 'error'); }
+    if (!res.ok) { gAlert(data.error || 'Failed.', 'error'); return; }
+    document.getElementById('whDisplay').textContent = url;
+    gAlert('Webhook URL saved!', 'success');
+  } catch (e) { btnLoad('saveWhBtn', false, 'Save'); gAlert('Error: ' + e.message, 'error'); }
 }
 
-async function removeWebhook() {
+async function doDelWebhook() {
+  btnLoad('delWhBtn', true, 'Removing...');
   try {
-    await fetch('/api/webhook-url', {
-      method: 'DELETE',
-      headers: { 'X-Merchant-Id': SESSION.userId, 'X-Api-Key': SESSION.apiKey },
-    });
-    document.getElementById('webhookDisplay').textContent = 'Not configured';
-    document.getElementById('webhookUrl').value = '';
-    showAlert('Webhook removed.', 'success');
-  } catch {}
+    await fetch('/api/webhook-url', { method: 'DELETE', headers: { 'X-Merchant-Id': S.userId, 'X-Api-Key': S.apiKey } });
+    btnLoad('delWhBtn', false, 'Remove');
+    document.getElementById('whDisplay').textContent = 'Not configured';
+    document.getElementById('whInput').value = '';
+    gAlert('Webhook removed.', 'success');
+  } catch (e) { btnLoad('delWhBtn', false, 'Remove'); gAlert('Error: ' + e.message, 'error'); }
 }
-
-function showAlert(msg, type) {
-  const el = document.getElementById('alertBox');
-  el.innerHTML = '<div class="alert alert-' + (type==='error'?'error':'success') + '">' + msg + '</div>';
-  setTimeout(() => { el.innerHTML = ''; }, 4000);
-}
-
-// Close modal on overlay click
-document.getElementById('invoiceModal').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
-});
 </script>
 </body>
 </html>`;
