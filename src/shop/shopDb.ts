@@ -122,7 +122,7 @@ export async function createOrder(
 
   // Decrement stock atomically
   for (const item of items) {
-    await supabase.rpc('decrement_stock', { p_product_id: item.product_id, p_qty: item.quantity }).catch(() => {});
+    try { await supabase.rpc('decrement_stock', { p_product_id: item.product_id, p_qty: item.quantity }); } catch {}
   }
 
   return order;
