@@ -111,7 +111,7 @@ export function registerMerchantShopHandlers(bot: Telegraf) {
     if (!slug || !/^[a-z0-9_]{3,30}$/.test(slug)) return ctx.reply('Slug must be 3-30 lowercase letters/numbers/underscores.\nExample: /set_slug myshop');
     try {
       await supabase.from('merchants').update({ store_slug: slug }).eq('telegram_id', userId);
-      const storeUrl = `https://t.me/${CONFIG.BOT_USERNAME}/store?startapp=${slug}`;
+      const storeUrl = `${CONFIG.WEBHOOK_DOMAIN}/store?m=${slug}`;
       await ctx.reply(
         '✅ *Store slug set!*\n\nYour store link:\n`' + storeUrl + '`\n\nShare this link with customers!',
         { parse_mode: 'Markdown' }
@@ -230,7 +230,7 @@ async function saveProduct(bot: Telegraf, ctx: any, userId: number, session: any
       description: session.description ?? '',
       price_usd: session.price!,
       stock_count: session.stock!,
-      image_url: imageUrl ?? undefined,
+      image_url: imageUrl,
     });
     await ctx.reply(
       '🎉 *Product Created!*\n\n' +

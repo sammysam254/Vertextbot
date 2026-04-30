@@ -142,7 +142,7 @@ function renderOverview() {
   document.getElementById('storeName').textContent = m.store_name || 'My Store';
   const botUser = 'Vertextmarketbot';
   const slug = m.store_slug || m.telegram_id;
-  storeLinkVal = 'https://t.me/' + botUser + '?start=store_' + slug;
+  storeLinkVal = window.location.origin + '/store?m=' + slug;
   document.getElementById('storeLink').textContent = storeLinkVal;
 }
 
