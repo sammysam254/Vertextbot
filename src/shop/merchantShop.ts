@@ -230,7 +230,7 @@ async function saveProduct(bot: Telegraf, ctx: any, userId: number, session: any
       description: session.description ?? '',
       price_usd: session.price!,
       stock_count: session.stock!,
-      image_url: imageUrl,
+      image_url: imageUrl ?? undefined,
     });
     await ctx.reply(
       '🎉 *Product Created!*\n\n' +
