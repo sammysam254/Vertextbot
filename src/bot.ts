@@ -66,29 +66,25 @@ export function createBot(): Telegraf {
   });
 
   // Shop commands
-  
+
+  bot.command('cart', async (ctx) => {
+    const userId = ctx.from?.id;
+    if (!userId) return;
+    const { supabase } = await import('./supabase');
+    // Get cart from customerShop module
+    const { carts } = await import('./shop/customerShop');
+    const cart = (carts as any).get(userId);
+    if (!cart || !cart.items.length) return ctx.reply('Your cart is empty.\n\nUse /store <id> to browse products.');
+    const total = cart.items.reduce((s: number, i: any) => s + i.price * i.qty, 0);
+    const lines = cart.items.map((i: any) => `${i.name} x${i.qty} = $${(i.price * i.qty).toFixed(2)}`).join('\n');
+    await ctx.reply(`Your Cart\n\n${lines}\n\nTotal: $${total.toFixed(2)} USD`, {
+      ...Markup.inlineKeyboard([
+        [Markup.button.callback('Checkout', 'checkout_' + cart.merchantId), Markup.button.callback('Clear Cart', 'clear_cart_' + cart.merchantId)],
+      ])
+    });
   });
 
-  
-bot.command('cart', async (ctx) => {
-  const userId = ctx.from?.id;
-  if (!userId) return;
-  const { supabase } = await import('./supabase');
-  // Get cart from customerShop module
-  const { carts } = await import('./shop/customerShop');
-  const cart = (carts as any).get(userId);
-  if (!cart || !cart.items.length) return ctx.reply('Your cart is empty.\n\nUse /store <id> to browse products.');
-  const total = cart.items.reduce((s: number, i: any) => s + i.price * i.qty, 0);
-  const lines = cart.items.map((i: any) => `${i.name} x${i.qty} = $${(i.price * i.qty).toFixed(2)}`).join('\n');
-  await ctx.reply(`Your Cart\n\n${lines}\n\nTotal: $${total.toFixed(2)} USD`, {
-    ...Markup.inlineKeyboard([
-      [Markup.button.callback('Checkout', 'checkout_' + cart.merchantId), Markup.button.callback('Clear Cart', 'clear_cart_' + cart.merchantId)],
-    ])
-  });
-});
-
-
-bot.command('store', async (ctx) => {
+  bot.command('store', async (ctx) => {
     const arg = ctx.message.text.split(' ')[1]?.trim();
     if (!arg) return ctx.reply('Usage: /store <merchant_id_or_slug>\nExample: /store myshop');
     await openStore(ctx, arg);
@@ -116,7 +112,6 @@ bot.command('store', async (ctx) => {
     const btns = orders.filter((o:any)=>o.status==='PAID').map((o:any)=>[Markup.button.callback('📦 Ship #'+o.order_id.slice(0,8),'ship_order_'+o.order_id)]);
     await ctx.reply(text, { ...Markup.inlineKeyboard(btns) });
   });
-
 
   bot.command('help', (ctx) => {
     ctx.reply(
