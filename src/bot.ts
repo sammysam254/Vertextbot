@@ -96,7 +96,7 @@ export function createBot(): Telegraf {
   });
 
 
-  bot.command('help',, (ctx) => {
+  bot.command('help', (ctx) => {
     ctx.reply(
       'Vertext Bot Commands\n\n' +
       '/start - Main menu\n' +
