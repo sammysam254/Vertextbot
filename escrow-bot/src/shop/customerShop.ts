@@ -179,7 +179,7 @@ export async function openStore(ctx: any, arg: string) {
   } else {
     // Slug lookup
     const merchant = await getMerchantBySlug(arg).catch(() => null);
-    if (!merchant) return ctx.reply('❌ Store not found. Check the link and try again.');
+    if (!merchant) return ctx.reply('Store not found. Check the link and try again.');
     merchantId = merchant.telegram_id;
   }
 

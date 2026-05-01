@@ -8,49 +8,47 @@ export function isAdmin(userId: number): boolean {
 
 const MERCHANT_KB = Markup.keyboard([
   ['My Wallet', 'Create Invoice'],
-  ['My Invoices', 'My Orders'],
-  ['My Products', 'Store Orders'],
-  ['Export CSV', 'API Settings'],
+  ['My Invoices', 'My Products'],
+  ['Store Orders', 'Export CSV'],
+  ['My Store', 'API Settings'],
   ['Dashboard', 'Help'],
 ]).resize();
 
 const ADMIN_KB = Markup.keyboard([
   ['My Wallet', 'Create Invoice'],
-  ['My Invoices', 'My Orders'],
-  ['My Products', 'Store Orders'],
-  ['Export CSV', 'API Settings'],
+  ['My Invoices', 'My Products'],
+  ['Store Orders', 'Export CSV'],
+  ['My Store', 'API Settings'],
   ['Admin Dashboard', 'Dashboard'],
   ['Help'],
 ]).resize();
 
 const CUSTOMER_KB = Markup.keyboard([
   ['Register as Merchant'],
-  ['My Orders', 'Help'],
+  ['Browse Stores', 'My Orders'],
+  ['Help'],
 ]).resize();
 
 export async function sendMainMenu(ctx: any, userId: number) {
   const merchant = await getMerchant(userId).catch(() => null);
   const admin = isAdmin(userId);
-
-  const storeUrl = CONFIG.WEBHOOK_DOMAIN + '/store';
   const merchantAppUrl = CONFIG.WEBHOOK_DOMAIN + '/merchant-app';
 
   if (admin) {
-    return ctx.reply('Admin Panel - Vertext Bot\n\nSelect an option below:', {
+    return ctx.reply('Admin Panel - Vertext Bot', {
       ...ADMIN_KB,
-      ...Markup.inlineKeyboard([
-        [Markup.button.webApp('Merchant Dashboard', merchantAppUrl)],
-      ]),
+      ...Markup.inlineKeyboard([[Markup.button.webApp('Open Merchant Dashboard', merchantAppUrl)]]),
     });
   }
 
   if (merchant?.payout_address) {
     const slug = (merchant as any).store_slug || merchant.telegram_id;
+    const storeUrl = CONFIG.WEBHOOK_DOMAIN + '/store?m=' + slug;
     return ctx.reply('Vertext Escrow Bot\n\nWelcome back! Use the menu below:', {
       ...MERCHANT_KB,
       ...Markup.inlineKeyboard([
         [Markup.button.webApp('Open Merchant Dashboard', merchantAppUrl)],
-        [Markup.button.url('My Store Link', storeUrl + '?m=' + slug)],
+        [Markup.button.url('View My Store', storeUrl)],
       ]),
     });
   }
@@ -76,15 +74,14 @@ export function registerMenuHandlers(bot: Telegraf) {
     const { totalFee } = calcFees(networkFee);
     const locked = Number((merchant as any).locked_amount ?? 0);
     await ctx.reply(
-      'My Wallet\n\n' +
-      'Available: $' + Number(merchant.internal_balance).toFixed(4) + ' USDT' +
-      (locked > 0 ? '\nLocked (dispute): $' + locked.toFixed(4) : '') +
+      'My Wallet\n\nAvailable: $' + Number(merchant.internal_balance).toFixed(4) + ' USDT' +
+      (locked > 0 ? '\nLocked: $' + locked.toFixed(4) : '') +
       '\nNetwork: ' + merchant.payout_network +
       '\nAddress: ' + merchant.payout_address +
-      '\nWithdrawal fee: ~$' + totalFee.toFixed(4),
+      '\nFee per withdrawal: ~$' + totalFee.toFixed(4),
       { ...Markup.inlineKeyboard([
         [Markup.button.callback('Deposit', 'wallet_deposit'), Markup.button.callback('Withdraw', 'wallet_withdraw')],
-        [Markup.button.callback('Refresh', 'wallet_menu')],
+        [Markup.button.callback('Refresh Balance', 'wallet_menu')],
       ])}
     );
   });
@@ -95,7 +92,7 @@ export function registerMenuHandlers(bot: Telegraf) {
     const merchant = await getMerchant(ctx.from!.id).catch(() => null);
     if (!merchant?.payout_address) return ctx.reply('Register as a merchant first.', { ...Markup.inlineKeyboard([[Markup.button.callback('Register', 'register_merchant')]]) });
     invoiceSession.set(ctx.from!.id, { step: 'AWAITING_AMOUNT' });
-    await ctx.reply('Create Invoice - Step 1 of 2\n\nReply with the amount in USD:\nExample: 50.00', { ...Markup.inlineKeyboard([[Markup.button.callback('Cancel', 'back_to_menu')]]) });
+    await ctx.reply('Create Invoice - Step 1 of 2\n\nReply with amount in USD (e.g. 50.00):', { ...Markup.inlineKeyboard([[Markup.button.callback('Cancel', 'back_to_menu')]]) });
   });
 
   // ── My Invoices ────────────────────────────────────────────────────────────
@@ -103,18 +100,10 @@ export function registerMenuHandlers(bot: Telegraf) {
     const invoices = await getInvoicesByMerchant(ctx.from!.id, 10).catch(() => []);
     if (!invoices.length) return ctx.reply('No invoices yet.', { ...Markup.inlineKeyboard([[Markup.button.callback('Create Invoice', 'invoice_start')]]) });
     const buttons = invoices.map((inv: any) => [
-      Markup.button.callback(
-        (inv.status === 'PAID' ? 'PAID' : inv.status === 'EXPIRED' ? 'EXPIRED' : 'PENDING') + ' $' + Number(inv.amount_fiat).toFixed(2) + ' - ' + inv.description.slice(0, 18),
-        'view_invoice_' + inv.invoice_id
-      )
+      Markup.button.callback((inv.status === 'PAID' ? 'PAID' : inv.status === 'EXPIRED' ? 'EXPIRED' : 'PENDING') + ' $' + Number(inv.amount_fiat).toFixed(2) + ' - ' + inv.description.slice(0, 18), 'view_invoice_' + inv.invoice_id)
     ]);
     buttons.push([Markup.button.callback('New Invoice', 'invoice_start')]);
-    await ctx.reply('My Invoices (tap to view):', { ...Markup.inlineKeyboard(buttons) });
-  });
-
-  // ── My Orders ──────────────────────────────────────────────────────────────
-  bot.hears('My Orders', async (ctx) => {
-    await ctx.reply('Click a merchant payment link to pay.\nLinks: t.me/' + CONFIG.BOT_USERNAME + '?start=inv_...');
+    await ctx.reply('My Invoices:', { ...Markup.inlineKeyboard(buttons) });
   });
 
   // ── My Products ────────────────────────────────────────────────────────────
@@ -125,16 +114,12 @@ export function registerMenuHandlers(bot: Telegraf) {
     if (!merchant?.payout_address) return ctx.reply('Register as a merchant first.');
     const { getMerchantProducts } = await import('../shop/shopDb');
     const prods = await getMerchantProducts(userId).catch(() => []);
-    if (!prods.length) {
-      return ctx.reply(
-        'No products yet.\n\nUse /add_product to create your first product!',
-        { ...Markup.inlineKeyboard([[Markup.button.callback('+ Add Product', 'start_add_product')]]) }
-      );
-    }
+    if (!prods.length) return ctx.reply('No products yet. Use /add_product to create your first!',
+      { ...Markup.inlineKeyboard([[Markup.button.callback('+ Add Product', 'start_add_product')]]) });
     const buttons = prods.slice(0, 8).map((p: any) => [
-      Markup.button.callback((p.is_active ? '✅' : '⛔') + ' ' + p.name.slice(0, 25) + ' $' + Number(p.price_usd).toFixed(2), 'toggle_product_' + p.product_id)
+      Markup.button.callback((p.is_active ? '✅' : '⛔') + ' ' + p.name.slice(0, 22) + ' $' + Number(p.price_usd).toFixed(2), 'toggle_product_' + p.product_id)
     ]);
-    buttons.push([Markup.button.callback('+ Add Product', 'start_add_product'), Markup.button.callback('All Products', 'products_page_0')]);
+    buttons.push([Markup.button.callback('+ Add Product', 'start_add_product'), Markup.button.callback('View All', 'products_page_0')]);
     await ctx.reply('My Products (' + prods.length + ' total):', { ...Markup.inlineKeyboard(buttons) });
   });
 
@@ -149,17 +134,43 @@ export function registerMenuHandlers(bot: Telegraf) {
     if (!orders.length) return ctx.reply('No store orders yet.\n\nShare your store link with customers to start selling!');
     const icons: Record<string, string> = { PENDING: '⏳', PAID: '✅', SHIPPED: '📦', CANCELLED: '❌' };
     const text = 'Store Orders (' + orders.length + ')\n\n' +
-      orders.map((o: any) => icons[o.status] + ' $' + Number(o.total_amount_usd).toFixed(2) + ' — ' + o.status + ' — ' + o.order_id.slice(0, 8)).join('\n');
-    const shipBtns = orders.filter((o: any) => o.status === 'PAID').map((o: any) => [
-      Markup.button.callback('📦 Ship ' + o.order_id.slice(0, 8), 'ship_order_' + o.order_id)
-    ]);
+      orders.map((o: any) => icons[o.status] + ' $' + Number(o.total_amount_usd).toFixed(2) + ' ' + o.status + ' #' + o.order_id.slice(0, 8)).join('\n');
+    const shipBtns = orders.filter((o: any) => o.status === 'PAID').map((o: any) => [Markup.button.callback('📦 Ship #' + o.order_id.slice(0, 8), 'ship_order_' + o.order_id)]);
     await ctx.reply(text, { ...Markup.inlineKeyboard(shipBtns) });
+  });
+
+  // ── My Store ───────────────────────────────────────────────────────────────
+  bot.hears('My Store', async (ctx) => {
+    const userId = ctx.from?.id;
+    if (!userId) return;
+    const merchant = await getMerchant(userId).catch(() => null);
+    if (!merchant?.payout_address) return ctx.reply('Register as a merchant first.');
+    const slug = (merchant as any).store_slug || merchant.telegram_id;
+    const storeUrl = CONFIG.WEBHOOK_DOMAIN + '/store?m=' + slug;
+    const storeName = (merchant as any).store_name || 'My Store';
+    const storeBio = (merchant as any).store_bio || 'Not set';
+    await ctx.reply(
+      'My Store\n\n' +
+      'Name: ' + storeName + '\n' +
+      'Bio: ' + storeBio + '\n' +
+      'Slug: ' + ((merchant as any).store_slug || 'Not set') + '\n\n' +
+      'Store URL:\n' + storeUrl + '\n\n' +
+      'Share this URL with customers to let them browse and buy your products!\n\n' +
+      'Commands:\n/set_slug yourslug - Set custom URL\n/set_storename Name - Set store name\n/set_storebio Description - Set bio',
+      {
+        link_preview_options: { is_disabled: true },
+        ...Markup.inlineKeyboard([
+          [Markup.button.url('Open My Store', storeUrl)],
+          [Markup.button.callback('My Products', 'products_page_0')],
+        ])
+      }
+    );
   });
 
   // ── Export CSV ─────────────────────────────────────────────────────────────
   bot.hears('Export CSV', async (ctx) => {
     const userId = ctx.from!.id;
-    await ctx.reply('Generating your 30-day accounting report...');
+    await ctx.reply('Generating your 30-day report...');
     const { supabase } = await import('../supabase');
     const since = new Date(); since.setDate(since.getDate() - 30);
     const [invRes, wdRes] = await Promise.all([
@@ -171,26 +182,22 @@ export function registerMenuHandlers(bot: Telegraf) {
     if (!invoices.length && !withdrawals.length) return ctx.reply('No data found for the last 30 days.');
     const { Parser } = await import('json2csv');
     const lines = [
-      'VERTEXT ACCOUNTING EXPORT - ' + new Date().toUTCString(),
-      'Period: Last 30 days', '',
+      'VERTEXT ACCOUNTING EXPORT - ' + new Date().toUTCString(), 'Period: Last 30 days', '',
       '=== INVOICES ===',
-      invoices.length ? new Parser({ fields: ['invoice_id','description','amount_fiat','status','paid_currency','txid','dispute_status','created_at'] }).parse(invoices) : 'None',
+      invoices.length ? new Parser({ fields: ['invoice_id', 'description', 'amount_fiat', 'status', 'paid_currency', 'txid', 'created_at'] }).parse(invoices) : 'None',
       '', '=== WITHDRAWALS ===',
-      withdrawals.length ? new Parser({ fields: ['withdrawal_id','amount_requested','fee_deducted','net_payout','status','created_at'] }).parse(withdrawals) : 'None',
+      withdrawals.length ? new Parser({ fields: ['withdrawal_id', 'amount_requested', 'fee_deducted', 'net_payout', 'status', 'created_at'] }).parse(withdrawals) : 'None',
     ].join('\n');
     const csv = Buffer.from(lines, 'utf-8');
-    const filename = 'vertext_export_' + userId + '_' + new Date().toISOString().slice(0, 10) + '.csv';
-    await ctx.replyWithDocument({ source: csv, filename }, { caption: 'Accounting Export\nInvoices: ' + invoices.length + '\nWithdrawals: ' + withdrawals.length });
+    await ctx.replyWithDocument({ source: csv, filename: 'vertext_export_' + userId + '_' + new Date().toISOString().slice(0, 10) + '.csv' }, { caption: 'Accounting Export\nInvoices: ' + invoices.length + ' | Withdrawals: ' + withdrawals.length });
   });
 
-  // ── Dashboard (Mini App) ───────────────────────────────────────────────────
+  // ── Dashboard ──────────────────────────────────────────────────────────────
   bot.hears('Dashboard', async (ctx) => {
-    const merchantAppUrl = CONFIG.WEBHOOK_DOMAIN + '/merchant-app';
-    const dashUrl = CONFIG.WEBHOOK_DOMAIN + '/dashboard';
     await ctx.reply('Open your dashboard:', {
       ...Markup.inlineKeyboard([
-        [Markup.button.webApp('Merchant App', merchantAppUrl)],
-        [Markup.button.url('Web Dashboard', dashUrl)],
+        [Markup.button.webApp('Merchant App', CONFIG.WEBHOOK_DOMAIN + '/merchant-app')],
+        [Markup.button.url('Web Dashboard', CONFIG.WEBHOOK_DOMAIN + '/dashboard')],
       ]),
     });
   });
@@ -199,27 +206,37 @@ export function registerMenuHandlers(bot: Telegraf) {
   bot.hears('API Settings', async (ctx) => {
     const merchant = await getMerchant(ctx.from!.id).catch(() => null);
     if (!merchant?.payout_address) return ctx.reply('Register as a merchant first.');
-    const apiKey = (merchant as any).api_key;
-    const webhookUrl = (merchant as any).webhook_url;
-    const slug = (merchant as any).store_slug;
-    const storeUrl = CONFIG.WEBHOOK_DOMAIN + '/store?m=' + (slug || merchant.telegram_id);
+    const slug = (merchant as any).store_slug || merchant.telegram_id;
     await ctx.reply(
       'API & Store Settings\n\n' +
-      'API Key: ' + (apiKey ? apiKey.slice(0, 16) + '...' : 'Not generated') + '\n' +
-      'Webhook URL: ' + (webhookUrl ?? 'Not set') + '\n' +
-      'Store Slug: ' + (slug ?? 'Not set') + '\n' +
-      'Store URL: ' + storeUrl + '\n\n' +
-      'Commands:\n' +
-      '/apikey - Generate/view API key\n' +
-      '/setwebhook <url> - Set webhook URL\n' +
-      '/set_slug <slug> - Set store URL slug\n' +
-      '/set_storename <name> - Set store name\n' +
-      '/set_storebio <bio> - Set store bio',
+      'API Key: ' + ((merchant as any).api_key ? (merchant as any).api_key.slice(0, 16) + '...' : 'Not generated') + '\n' +
+      'Webhook URL: ' + ((merchant as any).webhook_url ?? 'Not set') + '\n' +
+      'Store Slug: ' + ((merchant as any).store_slug ?? 'Not set') + '\n\n' +
+      'Commands:\n/apikey - Generate API key\n/setwebhook <url> - Set webhook\n/set_slug <slug> - Set store slug\n/set_storename <name> - Store name\n/set_storebio <bio> - Store bio',
       { ...Markup.inlineKeyboard([
         [Markup.button.callback('Generate API Key', 'regen_api_key')],
-        [Markup.button.url('Open My Store', storeUrl)],
+        [Markup.button.url('Open My Store', CONFIG.WEBHOOK_DOMAIN + '/store?m=' + slug)],
       ])}
     );
+  });
+
+  // ── Browse Stores ─────────────────────────────────────────────────────────
+  bot.hears('Browse Stores', async (ctx) => {
+    await ctx.reply(
+      'Browse a store by sending:\n/store <merchant_id_or_slug>\n\nExample:\n/store myshop\n/store 123456789\n\nOr open the store link shared by a merchant.',
+      { ...Markup.inlineKeyboard([[Markup.button.url('All Stores', CONFIG.WEBHOOK_DOMAIN + '/store')]]) }
+    );
+  });
+
+  // ── My Orders (customer) ──────────────────────────────────────────────────
+  bot.hears('My Orders', async (ctx) => {
+    const userId = ctx.from?.id;
+    if (!userId) return;
+    const { supabase } = await import('../supabase');
+    const { data: orders } = await supabase.from('orders').select('*').eq('customer_tg_id', userId).order('created_at', { ascending: false }).limit(10);
+    if (!orders?.length) return ctx.reply('You have no orders yet.\n\nVisit a store to start shopping!');
+    const icons: Record<string, string> = { PENDING: '⏳', PAID: '✅', SHIPPED: '📦', CANCELLED: '❌' };
+    await ctx.reply('Your Orders\n\n' + orders.map((o: any) => icons[o.status] + ' $' + Number(o.total_amount_usd).toFixed(2) + ' ' + o.status + ' #' + o.order_id.slice(0, 8)).join('\n'));
   });
 
   // ── Admin Dashboard ────────────────────────────────────────────────────────
@@ -231,15 +248,8 @@ export function registerMenuHandlers(bot: Telegraf) {
       getAllInvoices().catch(() => []),
     ]);
     const totalBalance = merchants.reduce((s: number, m: any) => s + Number(m.internal_balance), 0);
-    const lockedBalance = merchants.reduce((s: number, m: any) => s + Number((m as any).locked_amount ?? 0), 0);
-    const paidInvoices = invoices.filter((i: any) => i.status === 'PAID').length;
     await ctx.reply(
-      'Admin Dashboard\n\n' +
-      'Merchants: ' + merchants.length + '\n' +
-      'Total Balance: $' + totalBalance.toFixed(4) + ' USDT\n' +
-      'Locked (disputes): $' + lockedBalance.toFixed(4) + '\n' +
-      'Invoices: ' + invoices.length + ' (' + paidInvoices + ' paid)\n' +
-      'Pending Withdrawals: ' + pendingWds.length,
+      'Admin Dashboard\n\nMerchants: ' + merchants.length + '\nTotal Balance: $' + totalBalance.toFixed(4) + ' USDT\nInvoices: ' + invoices.length + '\nPending Withdrawals: ' + pendingWds.length,
       { ...Markup.inlineKeyboard([
         [Markup.button.callback('Pending Withdrawals', 'admin_pending_wds')],
         [Markup.button.callback('All Merchants', 'admin_merchants'), Markup.button.callback('All Invoices', 'admin_invoices')],
@@ -247,7 +257,7 @@ export function registerMenuHandlers(bot: Telegraf) {
     );
   });
 
-  // ── Register as Merchant ───────────────────────────────────────────────────
+  // ── Register as Merchant ──────────────────────────────────────────────────
   bot.hears('Register as Merchant', async (ctx) => {
     await ctx.reply('Select your USDT payout network:', {
       ...Markup.inlineKeyboard([
@@ -258,39 +268,18 @@ export function registerMenuHandlers(bot: Telegraf) {
     });
   });
 
-  // ── Help ───────────────────────────────────────────────────────────────────
+  // ── Help ──────────────────────────────────────────────────────────────────
   bot.hears('Help', async (ctx) => {
     await ctx.reply(
       'Vertext Bot - Help\n\n' +
-      'MERCHANT MENU:\n' +
-      'My Wallet - Balance, deposit & withdraw\n' +
-      'Create Invoice - Generate payment links\n' +
-      'My Invoices - View all invoices\n' +
-      'My Products - Manage your store products\n' +
-      'Store Orders - View & ship customer orders\n' +
-      'Export CSV - Download 30-day report\n' +
-      'Dashboard - Open web dashboard\n' +
-      'API Settings - Webhook, API key & store\n\n' +
-      'COMMANDS:\n' +
-      '/start - Main menu\n' +
-      '/add_product - Add a new product\n' +
-      '/my_products - View your products\n' +
-      '/my_orders - View store orders\n' +
-      '/set_slug <slug> - Set store URL\n' +
-      '/set_storename <name> - Store name\n' +
-      '/store <id> - Browse a store\n' +
-      '/balance - Check balance\n' +
-      '/withdraw <amount> - Withdraw\n' +
-      '/apikey - Generate API key\n' +
-      '/export - CSV export\n\n' +
-      'LEGAL:\n' +
-      'Terms · Privacy · API Docs',
+      'FOR MERCHANTS:\nMy Wallet - Balance & withdraw\nCreate Invoice - Payment links\nMy Invoices - View invoices\nMy Products - Manage products\nStore Orders - Customer orders\nMy Store - Store link & settings\nExport CSV - Accounting report\nDashboard - Web dashboard\nAPI Settings - API key & webhook\n\n' +
+      'FOR CUSTOMERS:\nBrowse Stores - Find stores\nMy Orders - Your purchases\n/store <id> - Browse specific store\n/cart - View your cart\n\n' +
+      'COMMANDS:\n/start - Main menu\n/add_product - Add product\n/my_products - View products\n/my_orders - View orders\n/store <id> - Browse store\n/set_slug <s> - Store URL slug\n/set_storename <n> - Store name\n/balance - Check balance\n/withdraw <amt> - Withdraw\n/apikey - API key\n/export - CSV export',
       {
         link_preview_options: { is_disabled: true },
         ...Markup.inlineKeyboard([
           [Markup.button.url('Terms', CONFIG.WEBHOOK_DOMAIN + '/terms'), Markup.button.url('Privacy', CONFIG.WEBHOOK_DOMAIN + '/privacy')],
-          [Markup.button.url('API Docs', CONFIG.WEBHOOK_DOMAIN + '/api-docs')],
-          [Markup.button.url('Web Dashboard', CONFIG.WEBHOOK_DOMAIN + '/dashboard')],
+          [Markup.button.url('API Docs', CONFIG.WEBHOOK_DOMAIN + '/api-docs'), Markup.button.url('Dashboard', CONFIG.WEBHOOK_DOMAIN + '/dashboard')],
         ])
       }
     );

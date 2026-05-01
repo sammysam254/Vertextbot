@@ -65,7 +65,37 @@ export function createBot(): Telegraf {
     });
   });
 
-  bot.command('help', (ctx) => {
+  // Shop commands
+  bot.command('store', async (ctx) => {
+    const arg = ctx.message.text.split(' ')[1]?.trim();
+    if (!arg) return ctx.reply('Usage: /store <merchant_id_or_slug>\nExample: /store myshop');
+    await openStore(ctx, arg);
+  });
+
+  bot.command('my_products', async (ctx) => {
+    const userId = ctx.from?.id;
+    if (!userId) return;
+    const { getMerchantProducts } = await import('./shop/shopDb');
+    const prods = await getMerchantProducts(userId).catch(() => []);
+    if (!prods.length) return ctx.reply('No products yet. Use /add_product to create one!');
+    const buttons = prods.map((p: any) => [Markup.button.callback((p.is_active?'✅':'⛔') + ' ' + p.name.slice(0,25) + ' $' + Number(p.price_usd).toFixed(2), 'toggle_product_' + p.product_id)]);
+    buttons.push([Markup.button.callback('+ Add Product', 'start_add_product')]);
+    await ctx.reply('My Products (' + prods.length + '):', { ...Markup.inlineKeyboard(buttons) });
+  });
+
+  bot.command('my_orders', async (ctx) => {
+    const userId = ctx.from?.id;
+    if (!userId) return;
+    const { getMerchantOrders } = await import('./shop/shopDb');
+    const orders = await getMerchantOrders(userId, 10).catch(() => []);
+    if (!orders.length) return ctx.reply('No store orders yet.');
+    const icons: Record<string,string> = {PENDING:'⏳',PAID:'✅',SHIPPED:'📦',CANCELLED:'❌'};
+    const text = 'Store Orders\n\n' + orders.map((o:any) => icons[o.status] + ' $' + Number(o.total_amount_usd).toFixed(2) + ' ' + o.status + ' #' + o.order_id.slice(0,8)).join('\n');
+    const btns = orders.filter((o:any)=>o.status==='PAID').map((o:any)=>[Markup.button.callback('📦 Ship #'+o.order_id.slice(0,8),'ship_order_'+o.order_id)]);
+    await ctx.reply(text, { ...Markup.inlineKeyboard(btns) });
+  });
+
+  bot.command('help',, (ctx) => {
     ctx.reply(
       'Vertext Bot Commands\n\n' +
       '/start - Main menu\n' +
