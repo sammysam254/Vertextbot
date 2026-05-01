@@ -128,6 +128,24 @@ function getMerchantParam() {
   return m;
 }
 
+async function loadAllStores() {
+  try {
+    const res = await fetch('/api/stores');
+    const data = await res.json();
+    const stores = data.stores || [];
+    document.getElementById('prodGrid').innerHTML = stores.map(s =>
+      '<div class="prod-card" style="cursor:pointer" onclick="window.location.href='/store?m='+s.telegram_id+''">' +
+      '<div class="prod-img">🏪</div>' +
+      '<div class="prod-body">' +
+      '<div class="prod-name">' + esc(s.store_name || 'Store #' + s.telegram_id) + '</div>' +
+      '<div class="prod-desc">' + esc(s.store_bio || 'Click to browse') + '</div>' +
+      '<div class="prod-price">' + (s.product_count || 0) + ' products</div>' +
+      '<button class="add-btn" onclick="event.stopPropagation();window.location.href='/store?m='+s.telegram_id+''">Visit Store</button>' +
+      '</div></div>'
+    ).join('');
+  } catch(e) { document.getElementById('prodGrid').innerHTML = '<div class="empty">Failed to load stores.</div>'; }
+}
+
 async function load() {
   const param = getMerchantParam();
 
@@ -225,9 +243,33 @@ function changeQty(productId, delta) {
   updateCartUI();
 }
 
+async function processCheckout(customerId, cartArr) {
+  const btn = document.getElementById('checkoutBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Processing...';
+  try {
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant_id: merchantId, customer_tg_id: customerId, cart: cartArr }),
+    });
+    const data = await res.json();
+      btn.disabled = false; btn.innerHTML = 'Checkout · <span id="cartTotal">' + document.getElementById('cartTotal').textContent + '</span>';
+      document.getElementById('alertBox').innerHTML = '<div class="alert alert-e" style="margin:14px">' + (data.error || 'Checkout failed') + '</div>';
+      return;
+    }
+    payData = data; cart = {}; updateCartUI(); showPaymentScreen(data);
+  } catch (e) {
+    btn.disabled = false; btn.innerHTML = 'Checkout';
+    document.getElementById('alertBox').innerHTML = '<div class="alert alert-e" style="margin:14px">' + e.message + '</div>';
+  }
+}
+
 async function doCheckout() {
   if (!uid) {
-    document.getElementById('alertBox').innerHTML = '<div class="alert alert-e" style="margin:14px">Open this store from your Telegram app to checkout.</div>';
+    const tgId = prompt('Enter your Telegram ID to checkout (find it by messaging @userinfobot):');
+    const cartArr2 = Object.entries(cart).filter(([,q])=>q>0).map(([id,qty])=>({product_id:id,quantity:qty}));
+    await processCheckout(parseInt(tgId), cartArr2);
     return;
   }
   const cartArr = Object.entries(cart).filter(([,q])=>q>0).map(([id,qty])=>({product_id:id,quantity:qty}));

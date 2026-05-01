@@ -66,6 +66,26 @@ export function createBot(): Telegraf {
   });
 
   // Shop commands
+  bot.command('cart', async (ctx) => {
+    const userId = ctx.from?.id;
+    const { supabase } = await import('./supabase');
+    // Get cart from customerShop module
+    const { carts } = await import('./shop/customerShop');
+    const cart = (carts as any).get(userId);
+    const total = cart.items.reduce((s: number, i: any) => s + i.price * i.qty, 0);
+    const lines = cart.items.map((i: any) => i.name + ' x' + i.qty + ' = $' + (i.price * i.qty).toFixed(2)).join('
+');
+    await ctx.reply('Your Cart
+
+' + lines + '
+
+Total: $' + total.toFixed(2) + ' USD', {
+      ...Markup.inlineKeyboard([
+        [Markup.button.callback('Checkout', 'checkout_' + cart.merchantId), Markup.button.callback('Clear Cart', 'clear_cart_' + cart.merchantId)],
+      ])
+    });
+  });
+
   bot.command('store', async (ctx) => {
     const arg = ctx.message.text.split(' ')[1]?.trim();
     if (!arg) return ctx.reply('Usage: /store <merchant_id_or_slug>\nExample: /store myshop');

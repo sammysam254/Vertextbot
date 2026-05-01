@@ -240,3 +240,5 @@ async function showCart(ctx: any, userId: number, merchantId: number, edit = fal
   const opts = { parse_mode: 'Markdown' as const, ...Markup.inlineKeyboard(removeButtons) };
   return edit ? ctx.editMessageText(text, opts) : ctx.reply(text, opts);
 }
+
+export { carts };

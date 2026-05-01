@@ -264,4 +264,18 @@ router.post('/store/setup', async (req: Request, res: Response) => {
   }
 });
 
+
+// ─── GET /api/stores — list all active stores ──────────────────────────────
+router.get('/stores', async (_req: Request, res: Response) => {
+  const { data } = await supabase
+    .from('merchants')
+    .select('telegram_id, store_name, store_bio, store_slug')
+    .not('payout_address', 'is', null);
+  const stores = await Promise.all((data || []).map(async (m: any) => {
+    const { count } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('merchant_id', m.telegram_id).eq('is_active', true);
+    return { ...m, product_count: count || 0 };
+  }));
+  res.json({ stores: stores.filter(s => s.product_count > 0) });
+});
+
 export default router;
