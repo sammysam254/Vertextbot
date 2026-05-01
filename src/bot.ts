@@ -95,6 +95,7 @@ export function createBot(): Telegraf {
     await ctx.reply(text, { ...Markup.inlineKeyboard(btns) });
   });
 
+
   bot.command('help',, (ctx) => {
     ctx.reply(
       'Vertext Bot Commands\n\n' +
