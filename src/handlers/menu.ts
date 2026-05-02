@@ -34,11 +34,22 @@ export async function sendMainMenu(ctx: any, userId: number) {
   const merchantAppUrl = CONFIG.WEBHOOK_DOMAIN + '/merchant-app';
 
   if (admin) {
-    return ctx.reply('Admin Panel - Vertext Bot', ADMIN_KB);
+    return ctx.reply('Admin Panel - Vertext Bot', {
+      ...ADMIN_KB,
+      ...Markup.inlineKeyboard([[Markup.button.webApp('Open Merchant Dashboard', merchantAppUrl)]]),
+    });
   }
 
   if (merchant?.payout_address) {
-    return ctx.reply('Vertext Escrow Bot\n\nWelcome back! Use the menu below:', MERCHANT_KB);
+    const slug = (merchant as any).store_slug || merchant.telegram_id;
+    const storeUrl = CONFIG.WEBHOOK_DOMAIN + '/store?m=' + slug;
+    return ctx.reply('Vertext Escrow Bot\n\nWelcome back! Use the menu below:', {
+      ...MERCHANT_KB,
+      ...Markup.inlineKeyboard([
+        [Markup.button.webApp('Open Merchant Dashboard', merchantAppUrl)],
+        [Markup.button.url('View My Store', storeUrl)],
+      ]),
+    });
   }
 
   return ctx.reply('Vertext Escrow Bot\n\nSecure crypto escrow & invoicing.', { ...CUSTOMER_KB });
@@ -257,28 +268,6 @@ export function registerMenuHandlers(bot: Telegraf) {
   });
 
   // ── Help ──────────────────────────────────────────────────────────────────
-
-  bot.hears('My Cart', async (ctx) => {
-    const userId = ctx.from?.id;
-    if (!userId) return;
-    const { carts } = await import('../shop/customerShop');
-    const cart = (carts as any).get(userId);
-    if (!cart || !cart.items.length) return ctx.reply('Your cart is empty.\n\nUse /store <id> to browse products.');
-    const total = cart.items.reduce((s: number, i: any) => s + i.price * i.qty, 0);
-    const lines = cart.items.map((i: any) => i.name + ' x' + i.qty + ' = $' + (i.price * i.qty).toFixed(2)).join('\n');
-    const { Markup: M } = await import('telegraf');
-    await ctx.reply('Your Cart\n\n' + lines + '\n\nTotal: $' + total.toFixed(2), {
-      ...M.inlineKeyboard([
-        [M.button.callback('Checkout', 'checkout_' + cart.merchantId)],
-        [M.button.callback('Clear Cart', 'clear_cart_' + cart.merchantId)],
-      ])
-    });
-  });
-
-  bot.hears('Browse Stores', async (ctx) => {
-    const { CONFIG: C } = await import('../config');
-    await ctx.reply('Browse the Vertext Marketplace:\n' + C.WEBHOOK_DOMAIN + '/store\n\nOr use /store <merchant_id> to visit a specific store.');
-  });
   bot.hears('Help', async (ctx) => {
     await ctx.reply(
       'Vertext Bot - Help\n\n' +
