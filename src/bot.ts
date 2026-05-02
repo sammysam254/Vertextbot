@@ -172,3 +172,4 @@ export function createBot(): Telegraf {
 
   return bot;
 }
+// force rebuild Sat May  2 06:05:55 EAT 2026
