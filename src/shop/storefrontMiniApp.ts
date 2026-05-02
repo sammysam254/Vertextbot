@@ -158,7 +158,7 @@ function updCart() {
   const tot = Object.values(cart).reduce((s,q)=>s+q,0);
   const usd = Object.entries(cart).reduce((s,[id,q])=>{ const p=prods.find(x=>x.product_id===id); return s+(p?p.price_usd*q:0); },0);
   document.getElementById('cCount').textContent = tot;
-  document.getElementById('cTotal').textContent = '$'+usd.toFixed(2);
+  const ctEl = document.getElementById('cTotal'); if(ctEl) ctEl.textContent = '$'+usd.toFixed(2);
   document.getElementById('checkBar').className = 'bar'+(tot>0?' show':'');
   renderCart();
 }
@@ -177,15 +177,34 @@ function renderCart() {
 
 function chgQty(id, d) { cart[id]=(cart[id]||0)+d; if(cart[id]<=0) delete cart[id]; updCart(); }
 
+function submitTgId() {
+  const val = document.getElementById('tgid-input')?.value?.trim();
+  if (!val || isNaN(parseInt(val))) { alert('Please enter a valid Telegram ID'); return; }
+  localStorage.setItem('vxt_tgid', val);
+  document.getElementById('tgid-overlay')?.remove();
+  doCheckout(); // retry
+}
+
 async function doCheckout() {
   const entries = Object.entries(cart).filter(([,q])=>q>0);
   if (!entries.length) return;
-  let custId = uid;
+  let custId = uid || parseInt(localStorage.getItem('vxt_tgid') || '0') || 0;
   if (!custId) {
-    const input = prompt('Enter your Telegram ID to receive payment confirmation:\n(Get it from @userinfobot)');
-    if (!input || isNaN(parseInt(input))) { alert('Invalid Telegram ID'); return; }
-    custId = parseInt(input);
-    localStorage.setItem('vxt_tgid', String(custId));
+    // Show inline input instead of ugly prompt
+    const inp = document.createElement('div');
+    inp.id = 'tgid-overlay';
+    inp.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px';
+    inp.innerHTML = '<div style="background:#0f0f1c;border:1px solid #1e1e35;border-radius:16px;padding:24px;width:100%;max-width:360px">' +
+      '<div style="font-size:16px;font-weight:700;margin-bottom:8px">Enter Telegram ID</div>' +
+      '<div style="font-size:12px;color:#6b6b8a;margin-bottom:16px">Get your ID by messaging @userinfobot on Telegram</div>' +
+      '<input id="tgid-input" type="number" placeholder="e.g. 123456789" style="width:100%;background:#080810;border:1px solid #1e1e35;border-radius:10px;padding:12px;color:#eeeeff;font-size:15px;outline:none;margin-bottom:14px">' +
+      '<div style="display:flex;gap:8px">' +
+      '<button onclick="document.getElementById('tgid-overlay').remove()" style="flex:1;padding:12px;background:#161628;border:1px solid #1e1e35;color:#eeeeff;border-radius:10px;font-size:14px;cursor:pointer">Cancel</button>' +
+      '<button onclick="submitTgId()" style="flex:1;padding:12px;background:#00e676;border:none;color:#000;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">Continue</button>' +
+      '</div></div>';
+    document.body.appendChild(inp);
+    document.getElementById('tgid-input').focus();
+    return; // Will be re-triggered by submitTgId
   }
   const btn = document.getElementById('checkBtn');
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Processing...';
@@ -215,29 +234,28 @@ async function doCheckout() {
     if (pgCart) pgCart.style.display = 'none';
     if (tabsEl) tabsEl.style.display = 'none';
     if (barEl) barEl.className = 'bar';
-    // Build payment screen dynamically
-    const qrImg = d.qr_base64 ? '<img id="payQR" src="data:image/png;base64,'+d.qr_base64+'" style="width:190px;height:190px;display:block">' : '';
-    const payHtml = '<div class="pay-wrap">' +
-      '<div class="pay-h">Payment Request</div>' +
-      '<div class="pay-sub">Order #'+(d.order_id||'').slice(0,8).toUpperCase()+'</div>' +
-      (d.qr_base64 ? '<div class="qr-box">'+qrImg+'</div>' : '') +
-      '<div class="pay-amt">'+(d.pay_amount||'?')+' '+(d.pay_currency||'USDT').toUpperCase()+'</div>' +
-      '<div class="pay-addr" onclick="copyAddr()" id="payAddrEl">'+(d.pay_address||'')+'</div>' +
-      '<div style="font-size:11px;color:var(--mu);margin-bottom:16px">Tap address to copy · 20 min expiry</div>' +
-      '<button class="done-btn" onclick="window.Telegram&&window.Telegram.WebApp?window.Telegram.WebApp.close():history.back()">Done — Return to Chat</button>' +
-      '</div>';
-    if (pgPay) { pgPay.innerHTML = payHtml; pgPay.style.display = 'block'; }
+    if (pgPay) pgPay.style.display = 'block';
+
+    const payOrd = document.getElementById('payOrd');
+    const payAmt = document.getElementById('payAmt');
+    const payAddr = document.getElementById('payAddr');
+    const payQR = document.getElementById('payQR');
+
+    if (payOrd) payOrd.textContent = 'Order #' + (d.order_id||'').slice(0,8).toUpperCase();
+    if (payAmt) payAmt.textContent = (d.pay_amount||'?') + ' ' + (d.pay_currency||'').toUpperCase();
+    if (payAddr) payAddr.textContent = d.pay_address || 'Address unavailable';
+    if (payQR && d.qr_base64) payQR.src = 'data:image/png;base64,' + d.qr_base64;
 
   } catch(e) {
     btn.disabled = false;
-    btn.innerHTML = 'Checkout · <span id="cTotal">$0.00</span>';
-    updCart();
+    const curTotal = Object.entries(cart).reduce((s,[id,q])=>{const p=prods.find(x=>x.product_id===id);return s+(p?p.price_usd*q:0);},0);
+    btn.innerHTML = 'Checkout · $' + curTotal.toFixed(2);
     alert('Checkout error: ' + e.message);
   }
 }
 
 function copyAddr() {
-  navigator.clipboard.writeText(payData?.pay_address || document.getElementById('payAddrEl')?.textContent || '').then(()=>{
+  navigator.clipboard.writeText(payData?.pay_address||'').then(()=>{
     const el=document.getElementById('payAddr'); const o=el.textContent;
     el.textContent='✓ Copied!'; el.style.color='var(--gr)';
     setTimeout(()=>{ el.textContent=o; el.style.color=''; },1500);
