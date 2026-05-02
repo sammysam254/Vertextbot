@@ -215,17 +215,18 @@ async function doCheckout() {
     if (pgCart) pgCart.style.display = 'none';
     if (tabsEl) tabsEl.style.display = 'none';
     if (barEl) barEl.className = 'bar';
-    if (pgPay) pgPay.style.display = 'block';
-
-    const payOrd = document.getElementById('payOrd');
-    const payAmt = document.getElementById('payAmt');
-    const payAddr = document.getElementById('payAddr');
-    const payQR = document.getElementById('payQR');
-
-    if (payOrd) payOrd.textContent = 'Order #' + (d.order_id||'').slice(0,8).toUpperCase();
-    if (payAmt) payAmt.textContent = (d.pay_amount||'?') + ' ' + (d.pay_currency||'').toUpperCase();
-    if (payAddr) payAddr.textContent = d.pay_address || 'Address unavailable';
-    if (payQR && d.qr_base64) payQR.src = 'data:image/png;base64,' + d.qr_base64;
+    // Build payment screen dynamically
+    const qrImg = d.qr_base64 ? '<img id="payQR" src="data:image/png;base64,'+d.qr_base64+'" style="width:190px;height:190px;display:block">' : '';
+    const payHtml = '<div class="pay-wrap">' +
+      '<div class="pay-h">Payment Request</div>' +
+      '<div class="pay-sub">Order #'+(d.order_id||'').slice(0,8).toUpperCase()+'</div>' +
+      (d.qr_base64 ? '<div class="qr-box">'+qrImg+'</div>' : '') +
+      '<div class="pay-amt">'+(d.pay_amount||'?')+' '+(d.pay_currency||'USDT').toUpperCase()+'</div>' +
+      '<div class="pay-addr" onclick="copyAddr()" id="payAddrEl">'+(d.pay_address||'')+'</div>' +
+      '<div style="font-size:11px;color:var(--mu);margin-bottom:16px">Tap address to copy · 20 min expiry</div>' +
+      '<button class="done-btn" onclick="window.Telegram&&window.Telegram.WebApp?window.Telegram.WebApp.close():history.back()">Done — Return to Chat</button>' +
+      '</div>';
+    if (pgPay) { pgPay.innerHTML = payHtml; pgPay.style.display = 'block'; }
 
   } catch(e) {
     btn.disabled = false;
@@ -236,7 +237,7 @@ async function doCheckout() {
 }
 
 function copyAddr() {
-  navigator.clipboard.writeText(payData?.pay_address||'').then(()=>{
+  navigator.clipboard.writeText(payData?.pay_address || document.getElementById('payAddrEl')?.textContent || '').then(()=>{
     const el=document.getElementById('payAddr'); const o=el.textContent;
     el.textContent='✓ Copied!'; el.style.color='var(--gr)';
     setTimeout(()=>{ el.textContent=o; el.style.color=''; },1500);
