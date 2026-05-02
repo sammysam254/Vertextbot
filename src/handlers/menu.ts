@@ -9,23 +9,22 @@ export function isAdmin(userId: number): boolean {
 const MERCHANT_KB = Markup.keyboard([
   ['My Wallet', 'Create Invoice'],
   ['My Invoices', 'My Products'],
-  ['Store Orders', 'Export CSV'],
-  ['My Store', 'API Settings'],
-  ['Dashboard', 'Help'],
+  ['Store Orders', 'My Store'],
+  ['Export CSV', 'Dashboard'],
+  ['API Settings', 'Help'],
 ]).resize();
 
 const ADMIN_KB = Markup.keyboard([
   ['My Wallet', 'Create Invoice'],
   ['My Invoices', 'My Products'],
-  ['Store Orders', 'Export CSV'],
-  ['My Store', 'API Settings'],
-  ['Admin Dashboard', 'Dashboard'],
-  ['Help'],
+  ['Store Orders', 'My Store'],
+  ['Admin Dashboard', 'Export CSV'],
+  ['Dashboard', 'Help'],
 ]).resize();
 
 const CUSTOMER_KB = Markup.keyboard([
   ['Register as Merchant'],
-  ['Browse Stores', 'My Orders'],
+  ['Browse Stores', 'My Cart'],
   ['Help'],
 ]).resize();
 
@@ -35,22 +34,11 @@ export async function sendMainMenu(ctx: any, userId: number) {
   const merchantAppUrl = CONFIG.WEBHOOK_DOMAIN + '/merchant-app';
 
   if (admin) {
-    return ctx.reply('Admin Panel - Vertext Bot', {
-      ...ADMIN_KB,
-      ...Markup.inlineKeyboard([[Markup.button.webApp('Open Merchant Dashboard', merchantAppUrl)]]),
-    });
+    return ctx.reply('Admin Panel - Vertext Bot', ADMIN_KB);
   }
 
   if (merchant?.payout_address) {
-    const slug = (merchant as any).store_slug || merchant.telegram_id;
-    const storeUrl = CONFIG.WEBHOOK_DOMAIN + '/store?m=' + slug;
-    return ctx.reply('Vertext Escrow Bot\n\nWelcome back! Use the menu below:', {
-      ...MERCHANT_KB,
-      ...Markup.inlineKeyboard([
-        [Markup.button.webApp('Open Merchant Dashboard', merchantAppUrl)],
-        [Markup.button.url('View My Store', storeUrl)],
-      ]),
-    });
+    return ctx.reply('Vertext Escrow Bot\n\nWelcome back! Use the menu below:', MERCHANT_KB);
   }
 
   return ctx.reply('Vertext Escrow Bot\n\nSecure crypto escrow & invoicing.', { ...CUSTOMER_KB });

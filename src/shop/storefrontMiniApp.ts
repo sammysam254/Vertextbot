@@ -158,29 +158,37 @@ async function loadAllStores() {
 }
 
 async function load() {
-  const param = getMerchantParam();
+  // Get param from every possible source
+  let param = '';
+  try { param = tg?.initDataUnsafe?.start_param || ''; } catch(e) {}
+  if (!param) {
+    const p = new URLSearchParams(window.location.search);
+    param = p.get('m') || p.get('startapp') || p.get('merchant') || p.get('store') || '';
+  }
+  if (param.startsWith('store_')) param = param.slice(6);
+  if (param.startsWith('merchant_')) param = param.slice(9);
 
   if (!param) {
-    document.getElementById('storeTitle').textContent = 'No Store Found';
-    document.getElementById('alertBox').innerHTML = '<div class="alert alert-e" style="margin:14px">No store specified. Open this link from the merchant\'s Telegram message.</div>';
+    document.getElementById('storeTitle').textContent = 'Vertext Marketplace';
+    document.getElementById('storeBio').textContent = 'All stores';
+    await loadAllStores();
     return;
   }
 
+  document.getElementById('prodGrid').innerHTML = '<div class="empty">Loading...</div>';
+
   try {
-    console.log('Fetching store:', param); const res = await fetch('/api/store/' + encodeURIComponent(param));
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Store not found');
-    }
+    const res = await fetch('/api/store/' + encodeURIComponent(param));
+    if (!res.ok) throw new Error('Store not found (HTTP ' + res.status + ')');
     const data = await res.json();
     merchantId = data.merchant.telegram_id;
     products = data.products || [];
     document.getElementById('storeTitle').textContent = data.merchant.store_name || 'Store';
-    document.getElementById('storeBio').textContent = data.merchant.store_bio || '';
+    document.getElementById('storeBio').textContent = data.merchant.store_bio || products.length + ' products available';
     renderShop();
   } catch (e) {
-    document.getElementById('storeTitle').textContent = 'Store Not Found';
-    document.getElementById('alertBox').innerHTML = '<div class="alert alert-e" style="margin:14px">' + e.message + '</div>';
+    document.getElementById('storeTitle').textContent = 'Store Error';
+    document.getElementById('prodGrid').innerHTML = '<div class="empty" style="color:#ff8080">' + e.message + '</div>';
   }
 }
 
