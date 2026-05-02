@@ -195,22 +195,43 @@ async function doCheckout() {
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ merchant_id: mid, customer_tg_id: custId, cart: entries.map(([id,qty])=>({product_id:id,quantity:qty})) })
     });
-    const d = await res.json();
-    if (!res.ok) throw new Error(d.error||'Checkout failed');
-    payData = d; cart = {}; updCart();
-    // Show payment screen
-    document.getElementById('pg-shop').style.display='none';
-    document.getElementById('pg-cart').style.display='none';
-    document.querySelector('.tabs').style.display='none';
-    document.getElementById('checkBar').className='bar';
-    document.getElementById('pg-pay').style.display='block';
-    document.getElementById('payOrd').textContent = 'Order #'+d.order_id.slice(0,8).toUpperCase();
-    document.getElementById('payAmt').textContent = d.pay_amount+' '+(d.pay_currency||'').toUpperCase();
-    document.getElementById('payAddr').textContent = d.pay_address;
-    if (d.qr_base64) document.getElementById('payQR').src='data:image/png;base64,'+d.qr_base64;
+    const txt = await res.text();
+    let d;
+    try { d = JSON.parse(txt); } catch(e) { throw new Error('Server error: ' + txt.slice(0,100)); }
+    if (!res.ok) throw new Error(d.error || 'Checkout failed (HTTP '+res.status+')');
+    
+    payData = d;
+    cart = {};
+    updCart();
+
+    // Hide shop screens
+    const pgShop = document.getElementById('pg-shop');
+    const pgCart = document.getElementById('pg-cart');
+    const tabsEl = document.querySelector('.tabs');
+    const barEl = document.getElementById('checkBar');
+    const pgPay = document.getElementById('pg-pay');
+    
+    if (pgShop) pgShop.style.display = 'none';
+    if (pgCart) pgCart.style.display = 'none';
+    if (tabsEl) tabsEl.style.display = 'none';
+    if (barEl) barEl.className = 'bar';
+    if (pgPay) pgPay.style.display = 'block';
+
+    const payOrd = document.getElementById('payOrd');
+    const payAmt = document.getElementById('payAmt');
+    const payAddr = document.getElementById('payAddr');
+    const payQR = document.getElementById('payQR');
+
+    if (payOrd) payOrd.textContent = 'Order #' + (d.order_id||'').slice(0,8).toUpperCase();
+    if (payAmt) payAmt.textContent = (d.pay_amount||'?') + ' ' + (d.pay_currency||'').toUpperCase();
+    if (payAddr) payAddr.textContent = d.pay_address || 'Address unavailable';
+    if (payQR && d.qr_base64) payQR.src = 'data:image/png;base64,' + d.qr_base64;
+
   } catch(e) {
-    btn.disabled=false; btn.innerHTML='Checkout · <span id="cTotal">'+document.getElementById('cTotal').textContent+'</span>';
-    alert('Error: '+e.message);
+    btn.disabled = false;
+    btn.innerHTML = 'Checkout · <span id="cTotal">$0.00</span>';
+    updCart();
+    alert('Checkout error: ' + e.message);
   }
 }
 

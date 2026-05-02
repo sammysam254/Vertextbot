@@ -122,32 +122,41 @@ export function registerCustomerShopHandlers(bot: Telegraf) {
       let qrBuffer: Buffer | null = null;
       if (data.qr_base64) qrBuffer = Buffer.from(data.qr_base64, 'base64');
 
+      const orderId = String(data.order_id || '').slice(0, 8);
+      const totalUsd = Number(data.total_usd || 0).toFixed(2);
+      const payAmt = data.pay_amount || '?';
+      const payCur = String(data.pay_currency || 'USDT').toUpperCase();
+      const payAddr = data.pay_address || 'Address unavailable';
+      const invoiceId = data.invoice_id || '';
+
       const caption =
         `🧾 *Order Created!*\n\n` +
-        `Order: \`${data.order_id.slice(0, 8)}...\`\n` +
-        `Total: *$${data.total_usd.toFixed(2)} USD*\n\n` +
-        `🪙 *Pay Exactly:*\n\`${data.pay_amount} ${data.pay_currency.toUpperCase()}\`\n\n` +
-        `📬 *Send to:*\n\`${data.pay_address}\`\n\n` +
-        `⏱ Expires in 20 minutes`;
+        `Order: \`${orderId}...\`\n` +
+        `Total: *$${totalUsd} USD*\n\n` +
+        `🪙 *Pay Exactly:*\n\`${payAmt} ${payCur}\`\n\n` +
+        `📬 *Send to Address:*\n\`${payAddr}\`\n\n` +
+        `⏱ Expires in 20 minutes\n` +
+        `⚠️ Send the exact amount shown`;
+
+      const keyboard = Markup.inlineKeyboard([
+        [Markup.button.callback('📡 Track Payment', 'check_status_' + invoiceId)],
+        [Markup.button.callback('🛍️ Continue Shopping', 'store_page_0_' + merchantId)],
+      ]);
+
+      await ctx.deleteMessage().catch(() => {});
 
       if (qrBuffer) {
         await ctx.replyWithPhoto(
           { source: qrBuffer, filename: 'payment.png' },
-          {
-            caption,
-            parse_mode: 'Markdown',
-            ...Markup.inlineKeyboard([[Markup.button.callback('📡 Track Payment', 'check_status_' + data.invoice_id)]]),
-          }
+          { caption, parse_mode: 'Markdown', ...keyboard }
         );
       } else {
-        await ctx.reply(caption, {
-          parse_mode: 'Markdown',
-          ...Markup.inlineKeyboard([[Markup.button.callback('📡 Track Payment', 'check_status_' + data.invoice_id)]]),
-        });
+        await ctx.reply(caption, { parse_mode: 'Markdown', ...keyboard });
       }
     } catch (err: any) {
       const errMsg = err?.response?.data?.error ?? err.message ?? 'Checkout failed';
-      await ctx.reply('❌ ' + errMsg);
+      await ctx.deleteMessage().catch(() => {});
+      await ctx.reply('❌ *Checkout Failed*\n\n' + errMsg, { parse_mode: 'Markdown' });
     }
   });
 
@@ -240,5 +249,3 @@ async function showCart(ctx: any, userId: number, merchantId: number, edit = fal
   const opts = { parse_mode: 'Markdown' as const, ...Markup.inlineKeyboard(removeButtons) };
   return edit ? ctx.editMessageText(text, opts) : ctx.reply(text, opts);
 }
-
-export { carts };
