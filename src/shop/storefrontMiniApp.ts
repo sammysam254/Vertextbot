@@ -113,16 +113,27 @@ let payData = null;
 
 // ── Get merchant param from ALL possible sources ──────────────────────────────
 function getMerchantParam() {
-  // 1. Telegram startapp param (Mini App opened via bot link)
-  const startParam = tg.initDataUnsafe?.start_param || '';
-  if (startParam) {
-    if (startParam.startsWith('store_')) return startParam.slice(6);
-    if (startParam.startsWith('merchant_')) return startParam.slice(9);
-    return startParam;
+  // Try ALL possible sources in order
+  try {
+    // 1. Telegram WebApp start_param
+    const sp = tg?.initDataUnsafe?.start_param || '';
+    if (sp) {
+      if (sp.startsWith('store_')) return sp.slice(6);
+      if (sp.startsWith('merchant_')) return sp.slice(9);
+      if (sp.length > 0) return sp;
+    }
+  } catch(e) {}
+
+  // 2. URL hash (#store_xxx)
+  const hash = window.location.hash.replace('#','');
+  if (hash) {
+    if (hash.startsWith('store_')) return hash.slice(6);
+    return hash;
   }
-  // 2. URL query params (browser access)
+
+  // 3. URL search params
   const params = new URLSearchParams(window.location.search);
-  const m = params.get('m') || params.get('startapp') || params.get('merchant') || params.get('store') || '';
+  const m = params.get('m') || params.get('startapp') || params.get('merchant') || params.get('store') || params.get('tgWebAppStartParam') || '';
   if (m.startsWith('store_')) return m.slice(6);
   if (m.startsWith('merchant_')) return m.slice(9);
   return m;
@@ -156,7 +167,7 @@ async function load() {
   }
 
   try {
-    const res = await fetch('/api/store/' + encodeURIComponent(param));
+    console.log('Fetching store:', param); const res = await fetch('/api/store/' + encodeURIComponent(param));
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Store not found');

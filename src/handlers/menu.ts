@@ -269,6 +269,28 @@ export function registerMenuHandlers(bot: Telegraf) {
   });
 
   // ── Help ──────────────────────────────────────────────────────────────────
+
+  bot.hears('My Cart', async (ctx) => {
+    const userId = ctx.from?.id;
+    if (!userId) return;
+    const { carts } = await import('../shop/customerShop');
+    const cart = (carts as any).get(userId);
+    if (!cart || !cart.items.length) return ctx.reply('Your cart is empty.\n\nUse /store <id> to browse products.');
+    const total = cart.items.reduce((s: number, i: any) => s + i.price * i.qty, 0);
+    const lines = cart.items.map((i: any) => i.name + ' x' + i.qty + ' = $' + (i.price * i.qty).toFixed(2)).join('\n');
+    const { Markup: M } = await import('telegraf');
+    await ctx.reply('Your Cart\n\n' + lines + '\n\nTotal: $' + total.toFixed(2), {
+      ...M.inlineKeyboard([
+        [M.button.callback('Checkout', 'checkout_' + cart.merchantId)],
+        [M.button.callback('Clear Cart', 'clear_cart_' + cart.merchantId)],
+      ])
+    });
+  });
+
+  bot.hears('Browse Stores', async (ctx) => {
+    const { CONFIG: C } = await import('../config');
+    await ctx.reply('Browse the Vertext Marketplace:\n' + C.WEBHOOK_DOMAIN + '/store\n\nOr use /store <merchant_id> to visit a specific store.');
+  });
   bot.hears('Help', async (ctx) => {
     await ctx.reply(
       'Vertext Bot - Help\n\n' +
