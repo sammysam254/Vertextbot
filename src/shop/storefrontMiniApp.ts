@@ -80,7 +80,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg
 </div>
 <script>
 const tg = window.Telegram?.WebApp;
-if (tg) { tg.ready(); tg.expand(); }
+try { if (tg) { tg.ready(); tg.expand(); } } catch(e) {}
 const uid = tg?.initDataUnsafe?.user?.id || null;
 let mid = null, prods = [], cart = {}, payData = null;
 
@@ -93,23 +93,28 @@ function getParam() {
   return p;
 }
 
-window.onload = async function() {
+async function initStore() {
   const param = getParam();
+  const grid = document.getElementById('prodGrid');
   if (!param) { await loadMarketplace(); return; }
   try {
     const r = await fetch('/api/store/' + encodeURIComponent(param));
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'Store not found');
+    const txt = await r.text();
+    let d;
+    try { d = JSON.parse(txt); } catch(e) { throw new Error('Parse error: ' + txt.slice(0,80)); }
+    if (!r.ok) throw new Error(d.error || 'HTTP ' + r.status);
     mid = d.merchant.telegram_id;
     prods = d.products || [];
-    document.getElementById('sTitle').textContent = d.merchant.store_name || 'Store';
+    document.getElementById('sTitle').textContent = d.merchant.store_name || 'Store #' + mid;
     document.getElementById('sBio').textContent = d.merchant.store_bio || prods.length + ' products';
     renderProds();
   } catch(e) {
-    document.getElementById('sTitle').textContent = 'Error';
-    document.getElementById('prodGrid').innerHTML = '<div class="empty err">' + e.message + '</div>';
+    document.getElementById('sTitle').textContent = 'Load Error';
+    if (grid) grid.innerHTML = '<div class="empty err">' + e.message + '<br><small>URL: ' + location.href + '</small></div>';
   }
-};
+}
+
+window.onload = function() { initStore().catch(e => { document.getElementById('prodGrid').innerHTML = '<div class="empty err">Fatal: '+e.message+'</div>'; }); };
 
 async function loadMarketplace() {
   document.getElementById('sTitle').textContent = 'Vertext Marketplace';
