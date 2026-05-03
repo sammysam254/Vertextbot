@@ -265,17 +265,43 @@ router.post('/store/setup', async (req: Request, res: Response) => {
 });
 
 
-// ─── GET /api/stores — list all active stores ──────────────────────────────
-router.get('/stores', async (_req: Request, res: Response) => {
-  const { data } = await supabase
-    .from('merchants')
-    .select('telegram_id, store_name, store_bio, store_slug')
-    .not('payout_address', 'is', null);
-  const stores = await Promise.all((data || []).map(async (m: any) => {
-    const { count } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('merchant_id', m.telegram_id).eq('is_active', true);
-    return { ...m, product_count: count || 0 };
-  }));
-  res.json({ stores: stores.filter(s => s.product_count > 0) });
+// ─── GET /api/payment-status/:invoiceId ───────────────────────────────────────
+router.get('/payment-status/:invoiceId', async (req: Request, res: Response) => {
+  try {
+    const { data: invoice } = await supabase
+      .from('invoices')
+      .select('status, now_payment_id, paid_currency, paid_crypto_amount, txid')
+      .eq('invoice_id', req.params.invoiceId)
+      .single();
+
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found', status: 'unknown' });
+
+    // If already paid in our DB
+    if (invoice.status === 'PAID') {
+      return res.json({ status: 'finished', txid: invoice.txid, currency: invoice.paid_currency, amount: invoice.paid_crypto_amount });
+    }
+
+    // Check live from NOWPayments if we have a payment_id
+    if (invoice.now_payment_id) {
+      try {
+        const { data } = await axios.get(`https://api.nowpayments.io/v1/payment/${invoice.now_payment_id}`, {
+          headers: { 'x-api-key': CONFIG.NOW_API_KEY },
+        });
+        return res.json({
+          status: data.payment_status,
+          txid: data.payin_hash || null,
+          currency: data.pay_currency,
+          amount: data.actually_paid || data.pay_amount,
+        });
+      } catch {
+        // NOWPayments unreachable - return DB status
+      }
+    }
+
+    return res.json({ status: invoice.status === 'PAID' ? 'finished' : 'waiting' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message, status: 'unknown' });
+  }
 });
 
 export default router;

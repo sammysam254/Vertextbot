@@ -205,11 +205,45 @@ function chgQty(id,d){ cart[id]=(cart[id]||0)+d; if(cart[id]<=0) delete cart[id]
 // ── Checkout ───────────────────────────────────────────────────────────────────
 function doCheckout() {
   var custId = uid || parseInt(localStorage.getItem('vxt_tgid')||'0')||0;
-  if (!custId) { showTgIdOverlay(); return; }
-  runCheckout(custId);
+  if (!custId) { showTgIdOverlay(function(id){ showNetworkPicker(id); }); return; }
+  showNetworkPicker(custId);
 }
 
-function showTgIdOverlay() {
+var NETWORKS = [
+  {label:'USDT TRC20 (Tron)', code:'usdttrc20'},
+  {label:'USDT BEP20 (BSC)', code:'usdtbsc'},
+  {label:'USDT Polygon', code:'usdtmatic'},
+  {label:'Bitcoin (BTC)', code:'btc'},
+  {label:'Ethereum (ETH)', code:'eth'},
+  {label:'BNB', code:'bnb'},
+  {label:'Solana (SOL)', code:'sol'},
+  {label:'XRP', code:'xrp'},
+  {label:'Dogecoin (DOGE)', code:'doge'},
+  {label:'Litecoin (LTC)', code:'ltc'},
+  {label:'TRON (TRX)', code:'trx'},
+  {label:'MATIC', code:'matic'},
+];
+
+function showNetworkPicker(custId) {
+  var ov=document.createElement('div'); ov.className='overlay'; ov.id='netov';
+  var btns=NETWORKS.map(function(n){
+    return '<button onclick="selectNetwork(''+n.code+'','+custId+')" style="width:100%;padding:12px 16px;background:var(--s2);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:14px;cursor:pointer;font-family:inherit;text-align:left;margin-bottom:8px">'+n.label+'</button>';
+  }).join('');
+  ov.innerHTML='<div class="overlay-box" style="max-height:85vh;overflow-y:auto">' +
+    '<div class="overlay-title" style="margin-bottom:16px">Select Payment Currency</div>' +
+    btns +
+    '<button onclick="document.getElementById('netov').remove()" style="width:100%;padding:12px;background:transparent;border:1px solid var(--bd);border-radius:10px;color:var(--mu);font-size:14px;cursor:pointer;font-family:inherit;margin-top:4px">Cancel</button>' +
+    '</div>';
+  document.body.appendChild(ov);
+}
+
+function selectNetwork(currency, custId) {
+  var ov=document.getElementById('netov'); if(ov) ov.remove();
+  runCheckout(custId, currency);
+}
+
+function showTgIdOverlay(cb) {
+  window._tgCb = cb || null;
   var ov=document.createElement('div'); ov.className='overlay'; ov.id='tgov';
   ov.innerHTML='<div class="overlay-box">' +
     '<div class="overlay-title">Enter Your Telegram ID</div>' +
@@ -228,15 +262,16 @@ function saveTgId() {
   if(!v||isNaN(parseInt(v))){ alert('Enter a valid Telegram ID'); return; }
   localStorage.setItem('vxt_tgid',v);
   document.getElementById('tgov').remove();
-  runCheckout(parseInt(v));
+  if(window._tgCb) { window._tgCb(parseInt(v)); } else { showNetworkPicker(parseInt(v)); }
 }
 
-function runCheckout(custId) {
+function runCheckout(custId, currency) {
+  currency = currency || 'usdttrc20';
   var entries=Object.entries(cart).filter(function(e){return e[1]>0;});
   if(!entries.length) return;
   var btn=document.getElementById('coBtn');
   btn.disabled=true; btn.innerHTML='<span class="sp"></span> Processing...';
-  var payload={merchant_id:mid, customer_tg_id:custId, cart:entries.map(function(e){return {product_id:e[0],quantity:e[1]};})};
+  var payload={merchant_id:mid, customer_tg_id:custId, pay_currency:currency, cart:entries.map(function(e){return {product_id:e[0],quantity:e[1]};})};
   fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
     .then(function(r){ return r.text().then(function(t){return {ok:r.ok,text:t,status:r.status};}); })
     .then(function(res){
@@ -250,12 +285,16 @@ function runCheckout(custId) {
     });
 }
 
+var payTimer = null;
+var payExpiry = null;
+
 function showPayScreen(d) {
   document.getElementById('pg-shop').style.display='none';
   document.getElementById('pg-cart').style.display='none';
   document.querySelector('.tabs').style.display='none';
   document.getElementById('coBar').className='bar';
   document.getElementById('pg-pay').style.display='block';
+  payExpiry = Date.now() + 20*60*1000;
   var qrHtml=d.qr_base64?'<div class="pay-qr"><img src="data:image/png;base64,'+d.qr_base64+'" style="width:190px;height:190px"></div>':'';
   document.getElementById('payContent').innerHTML=
     '<div class="pay-h">Payment Request</div>' +
@@ -263,8 +302,74 @@ function showPayScreen(d) {
     qrHtml +
     '<div class="pay-amt">'+(d.pay_amount||'?')+' '+(d.pay_currency||'USDT').toUpperCase()+'</div>' +
     '<div class="pay-addr" onclick="copyAddr()">'+(d.pay_address||'')+'</div>' +
-    '<div style="font-size:11px;color:var(--mu);margin-bottom:16px">Tap address to copy · 20 min expiry</div>' +
-    '<button class="done-btn" onclick="closePay()">Done</button>';
+    '<div style="font-size:11px;color:var(--mu);margin-bottom:4px">Tap address to copy</div>' +
+    '<div id="payTimer" style="font-family:monospace;font-size:14px;color:var(--yw);margin:8px 0;padding:8px;background:var(--s1);border-radius:8px;border:1px solid var(--bd)">⏱ 20:00 remaining</div>' +
+    '<div id="payStatus" style="font-size:13px;color:var(--mu);margin:8px 0;padding:10px;background:var(--s1);border-radius:8px;border:1px solid var(--bd)">⏳ Waiting for payment...</div>' +
+    '<div style="display:flex;gap:8px;margin-top:12px">' +
+    '<button onclick="checkPayStatus()" style="flex:1;padding:12px;background:var(--pu);border:none;color:#fff;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Check Status</button>' +
+    '<button onclick="closePay()" style="flex:1;padding:12px;background:var(--s2);border:1px solid var(--bd);color:var(--tx);border-radius:10px;font-size:13px;cursor:pointer;font-family:inherit">Close</button>' +
+    '</div>';
+
+  // Start countdown timer
+  if (payTimer) clearInterval(payTimer);
+  payTimer = setInterval(function(){
+    var left = payExpiry - Date.now();
+    var el = document.getElementById('payTimer');
+    if (!el) { clearInterval(payTimer); return; }
+    if (left <= 0) {
+      clearInterval(payTimer);
+      el.textContent = '⛔ Payment window expired';
+      el.style.color = 'var(--re)';
+      document.getElementById('payStatus').textContent = '⛔ Invoice expired. Please restart checkout.';
+      return;
+    }
+    var mins = Math.floor(left/60000);
+    var secs = Math.floor((left%60000)/1000);
+    el.textContent = '⏱ ' + (mins<10?'0':'')+mins + ':' + (secs<10?'0':'')+secs + ' remaining';
+    el.style.color = left < 3*60*1000 ? 'var(--re)' : left < 5*60*1000 ? 'var(--yw)' : 'var(--gr)';
+  }, 1000);
+
+  // Auto-check status every 15s
+  if (window._statusPoll) clearInterval(window._statusPoll);
+  if (d.invoice_id) {
+    window._statusPoll = setInterval(function(){ checkPayStatusSilent(d.invoice_id); }, 15000);
+  }
+}
+
+function checkPayStatus() {
+  if (!payData || !payData.invoice_id) return;
+  var el = document.getElementById('payStatus');
+  if (el) el.textContent = '🔄 Checking payment...';
+  checkPayStatusSilent(payData.invoice_id, true);
+}
+
+function checkPayStatusSilent(invoiceId, showResult) {
+  fetch('/api/payment-status/' + invoiceId)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var el = document.getElementById('payStatus');
+      if (!el) return;
+      var status = d.status || 'waiting';
+      var msgs = {
+        waiting:'⏳ Waiting for payment on the blockchain...',
+        confirming:'🔄 Payment detected! Waiting for confirmations...',
+        confirmed:'✅ Payment confirmed! Processing...',
+        sending:'📤 Sending to merchant...',
+        finished:'🎉 Payment complete!',
+        paid:'🎉 Payment complete!',
+        failed:'❌ Payment failed. Please try again.',
+        expired:'⛔ Payment expired.'
+      };
+      el.textContent = msgs[status] || '⏳ Status: ' + status;
+      if (status === 'finished' || status === 'paid' || status === 'confirmed') {
+        el.style.color = 'var(--gr)';
+        if (payTimer) clearInterval(payTimer);
+        if (window._statusPoll) clearInterval(window._statusPoll);
+        var timerEl = document.getElementById('payTimer');
+        if (timerEl) { timerEl.textContent = '✅ Payment Confirmed!'; timerEl.style.color = 'var(--gr)'; }
+      }
+    })
+    .catch(function(){ if(showResult){ var el=document.getElementById('payStatus'); if(el) el.textContent='⚠️ Could not check status. Try again.'; } });
 }
 
 function closePay() { try{if(tg)tg.close();}catch(e){} history.back(); }
