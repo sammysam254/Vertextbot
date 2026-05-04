@@ -153,7 +153,7 @@ function loadMarketplace() {
           '</div></div>';
       }).join('') + '</div>';
     })
-    .catch(function(e) { document.getElementById('prodGrid').innerHTML = '<div class="empty err">' + e.message + '</div>'; });
+    .catch(function(e) { document.getElementById('prodGrid').innerHTML = '<div class="empty">No stores available yet.</div>'; });
 }
 
 function renderProds() {

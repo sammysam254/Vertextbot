@@ -304,4 +304,16 @@ router.get('/payment-status/:invoiceId', async (req: Request, res: Response) => 
   }
 });
 
+
+router.get('/stores', async (_req, res) => {
+  try {
+    const { data } = await supabase.from('merchants').select('telegram_id,store_name,store_bio,store_slug').not('payout_address', 'is', null);
+    const stores = [];
+    for (const m of (data || [])) {
+      const { count } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('merchant_id', m.telegram_id).eq('is_active', true);
+      if ((count || 0) > 0) stores.push({ ...m, product_count: count });
+    }
+    res.json({ stores });
+  } catch(err) { res.status(500).json({ stores: [], error: String(err) }); }
+});
 export default router;
